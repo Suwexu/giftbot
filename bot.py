@@ -60,7 +60,7 @@ async def start_command(message: types.Message):
     
     web_app_button = InlineKeyboardButton(
         text="🎡 Крутить колесо",
-        web_app=WebAppInfo(url=WEBAPP_URL)
+        web_app=WebAppInfo(url=WEBAPP_URL + 'index.html')
     )
     
     balance_button = InlineKeyboardButton(

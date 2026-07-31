@@ -275,62 +275,32 @@ async def spin_result_handler(message: types.Message):
             f"🔄 Попробуй снова через 24 часа!"
         )
 
-# ========== WEBHOOK ==========
+# ========== ЗАПУСК БОТА В POLLING-РЕЖИМЕ ==========
 
-async def handle_webhook(request):
-    """Обработка входящих запросов от Telegram"""
-    try:
-        data = await request.json()
-        update = types.Update(**data)
-        await dp.feed_update(bot, update)
-        return web.Response(status=200)
-    except Exception as e:
-        logger.error(f"❌ Ошибка в webhook: {e}")
-        return web.Response(status=500)
-
-# ========== HEALTHCHECK ==========
-
-async def healthcheck(request):
-    """Проверка здоровья для Railway"""
-    return web.Response(text="OK", status=200)
-
-# ========== ЗАПУСК БОТА ==========
-
-async def on_startup(app):
-    """Действия при запуске сервера"""
-    logger.info("🚀 Бот запускается...")
+async def on_startup():
+    """Действия при запуске бота"""
+    logger.info("🚀 Бот запускается в polling-режиме...")
     await init_db()
     
-    # Устанавливаем webhook
-    webhook_url = f"{WEBAPP_URL.rstrip('/static/')}/webhook"
+    # Удаляем старый webhook, если был
     try:
-        await bot.set_webhook(webhook_url)
-        logger.info(f"✅ Webhook установлен: {webhook_url}")
+        await bot.delete_webhook()
+        logger.info("✅ Webhook удалён")
     except Exception as e:
-        logger.warning(f"⚠️ Webhook не установлен: {e}")
-        logger.info("🔄 Переключаемся на polling режим...")
-        asyncio.create_task(dp.start_polling(bot))
-
-async def on_shutdown(app):
-    """Действия при остановке"""
-    logger.info("🛑 Бот останавливается...")
-    await bot.session.close()
+        logger.warning(f"⚠️ Ошибка удаления webhook: {e}")
+    
+    logger.info("🔄 Бот готов к работе!")
 
 async def main():
     """Основная функция запуска"""
-    # Создаем приложение с CORS
+    # Запускаем сервер для статики и healthcheck
     app = web.Application(middlewares=[cors_middleware])
     
     # Добавляем маршруты
-    app.router.add_get('/health', healthcheck)
-    app.router.add_post('/webhook', handle_webhook)
+    app.router.add_get('/health', lambda req: web.Response(text="OK"))
     app.router.add_static('/static/', path='static/', name='static', show_index=True)
     
-    # Добавляем обработчики старта/остановки
-    app.on_startup.append(on_startup)
-    app.on_shutdown.append(on_shutdown)
-    
-    # Запуск сервера
+    # Запускаем сервер
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=PORT)
@@ -340,11 +310,12 @@ async def main():
     logger.info(f"📁 Статика: {WEBAPP_URL}")
     logger.info(f"❤️ Healthcheck: {WEBAPP_URL.rstrip('/static/')}/health")
     
-    # Держим сервер работающим
-    try:
-        await asyncio.Event().wait()
-    except KeyboardInterrupt:
-        logger.info("🛑 Бот остановлен")
+    # Инициализация бота
+    await on_startup()
+    
+    # ЗАПУСКАЕМ POLLING
+    logger.info("🔄 Запуск polling...")
+    await dp.start_polling(bot)
 
 if __name__ == '__main__':
     try:

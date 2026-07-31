@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Конфигурация
 API_TOKEN = os.getenv('BOT_TOKEN')
-PORT = int(os.getenv('PORT', 8080))
+PORT = int(os.getenv('PORT', 443))  # <-- ПОРТ ИЗМЕНЁН НА 443
 WEBAPP_URL = "https://giftbot-production-6040.up.railway.app/static/"
 WEBHOOK_URL = "https://giftbot-production-6040.up.railway.app/webhook"
 
@@ -57,7 +57,8 @@ async def get_user_balance(user_id: int) -> int:
             )
             result = await cursor.fetchone()
             return result[0] if result else 0
-    except:
+    except Exception as e:
+        logger.error(f"Ошибка получения баланса: {e}")
         return 0
 
 async def get_last_spin_time(user_id: int) -> int:
@@ -69,7 +70,8 @@ async def get_last_spin_time(user_id: int) -> int:
             )
             result = await cursor.fetchone()
             return result[0] if result else 0
-    except:
+    except Exception as e:
+        logger.error(f"Ошибка получения времени: {e}")
         return 0
 
 # ========== ХЭНДЛЕРЫ КОМАНД ==========
@@ -243,7 +245,7 @@ async def main():
     app.router.add_post('/webhook', handle_webhook)
     app.router.add_static('/static/', path='static/', name='static', show_index=True)
     
-    # Запускаем сервер
+    # Запускаем сервер на порту 443
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=PORT)

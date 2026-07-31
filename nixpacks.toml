@@ -1,5 +1,5 @@
 [build]
-command = "python -m venv /opt/venv && source /opt/venv/bin/activate && pip install -r requirements.txt"
+command = "python -m venv /opt/venv && source /opt/venv/bin/activate && pip install -r requirements.txt && chmod -R 755 static"
 
 [start]
 cmd = "source /opt/venv/bin/activate && python bot.py"

@@ -97,10 +97,10 @@ async def start_command(message: types.Message):
     
     logger.info(f"👤 Пользователь {user_id} (@{username}) запустил бота")
     
-    # Кнопка с мини-приложением
+    # Кнопка с мини-приложением (НОВЫЙ URL!)
     web_app_button = InlineKeyboardButton(
         text="🎡 Крутить колесо",
-        web_app=WebAppInfo(url="https://giftbot-production-3dd4.up.railway.app/static/index.html")
+        web_app=WebAppInfo(url="https://giftbot-production-6040.up.railway.app/static/index.html")
     )
     
     # Кнопка для проверки баланса
@@ -268,7 +268,7 @@ async def start_http_server():
     await site.start()
     logger.info(f"🌐 HTTP сервер запущен на порту {PORT}")
     logger.info(f"❤️ Healthcheck: /health")
-    logger.info(f"📁 Статика: https://giftbot-production-3dd4.up.railway.app/static/")
+    logger.info(f"📁 Статика доступна по адресу: https://giftbot-production-6040.up.railway.app/static/")
 
 # ========== ЗАПУСК ==========
 

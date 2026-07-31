@@ -112,7 +112,7 @@ async def start_command(message: types.Message):
     
     logger.info(f"👤 Пользователь {user_id} (@{username}) запустил бота")
     
-    # Кнопка с мини-приложением (ПРАВИЛЬНЫЙ URL)
+    # Кнопка с мини-приложением
     web_app_button = InlineKeyboardButton(
         text="🎡 Крутить колесо",
         web_app=WebAppInfo(url=WEBAPP_URL + 'index.html')
@@ -144,13 +144,13 @@ async def check_balance(callback: types.CallbackQuery):
     
     await callback.answer(f"💰 Твой баланс: {balance} монет", show_alert=True)
 
-# ========== ОБРАБОТКА ЗАПРОСОВ ОТ MINI APP ==========
+# ========== ОБРАБОТЧИК ЗАПРОСОВ ИЗ MINI APP ==========
 
 @dp.message(lambda message: message.web_app_data is not None)
 async def handle_web_app_data(message: types.Message):
     """
-    ГЛАВНЫЙ ОБРАБОТЧИК для всех запросов из мини-приложения
-    Это единственное место, где обрабатываются сообщения с web_app_data
+    ГЛАВНЫЙ ОБРАБОТЧИК ДЛЯ MINI APP
+    Принимает данные из tg.sendData() и отправляет ответ
     """
     user_id = message.from_user.id
     data = message.web_app_data.data
@@ -164,7 +164,7 @@ async def handle_web_app_data(message: types.Message):
     elif data.startswith('spin_result:'):
         await spin_result_handler(message)
     else:
-        logger.warning(f"⚠️ Неизвестный запрос от {user_id}: {data}")
+        logger.warning(f"⚠️ Неизвестный запрос: {data}")
         await message.answer(json.dumps({
             'error': 'Неизвестный запрос'
         }))
@@ -192,9 +192,9 @@ async def get_status_handler(message: types.Message):
             'wait_time': wait_seconds,
             'balance': balance
         }
-        logger.info(f"⏳ Пользователь {user_id} должен ждать {wait_seconds} секунд")
+        logger.info(f"⏳ Пользователь {user_id} должен ждать {wait_seconds} сек")
     
-    # Отправляем JSON ответ
+    # ОТВЕТ ОТПРАВЛЯЕТСЯ ЧЕРЕЗ message.answer()
     await message.answer(json.dumps(response))
     logger.info(f"📤 Ответ отправлен для {user_id}")
 
@@ -203,7 +203,6 @@ async def spin_result_handler(message: types.Message):
     user_id = message.from_user.id
     data_str = message.web_app_data.data.replace('spin_result:', '')
     
-    # Парсим данные из мини-приложения
     try:
         result_data = json.loads(data_str)
         prize_name = result_data.get('prize_name', '0')
@@ -231,12 +230,10 @@ async def spin_result_handler(message: types.Message):
     # Обновление данных в БД
     try:
         async with aiosqlite.connect('users.db') as db:
-            # Обновляем время вращения и счетчик
             await db.execute(
                 'UPDATE users SET last_spin_time = ?, spins_count = spins_count + 1 WHERE user_id = ?',
                 (now, user_id)
             )
-            # Начисляем приз (если есть)
             if prize_value > 0:
                 await db.execute(
                     'UPDATE users SET total_balance = total_balance + ? WHERE user_id = ?',
@@ -251,7 +248,6 @@ async def spin_result_handler(message: types.Message):
         }))
         return
     
-    # Получаем новый баланс
     new_balance = await get_user_balance(user_id)
     
     # Отправляем ответ в мини-приложение

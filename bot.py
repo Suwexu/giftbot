@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 # Конфигурация
 API_TOKEN = os.getenv('BOT_TOKEN')
-PORT = int(os.getenv('PORT', 443))  # <-- ПОРТ ИЗМЕНЁН НА 443
-WEBAPP_URL = "https://giftbot-production-6040.up.railway.app/static/"
-WEBHOOK_URL = "https://giftbot-production-6040.up.railway.app/webhook"
+PORT = int(os.getenv('PORT', 443))
+WEBAPP_URL = "https://cyberxgift.ru/static/"
+WEBHOOK_URL = "https://cyberxgift.ru/webhook"
 
 if not API_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения!")
@@ -245,7 +245,7 @@ async def main():
     app.router.add_post('/webhook', handle_webhook)
     app.router.add_static('/static/', path='static/', name='static', show_index=True)
     
-    # Запускаем сервер на порту 443
+    # Запускаем сервер
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=PORT)

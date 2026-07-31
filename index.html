@@ -6,12 +6,12 @@
     <title>Колесо Бонусов</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* ... тот же CSS что и раньше, без изменений ... */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             display: flex;
@@ -23,7 +23,6 @@
             padding: 15px;
             overflow-x: hidden;
         }
-        
         .container {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
@@ -34,12 +33,10 @@
             max-width: 500px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
         .header {
             text-align: center;
             margin-bottom: 20px;
         }
-        
         .header h1 {
             font-size: 26px;
             background: linear-gradient(90deg, #f5c842, #ff6b6b);
@@ -47,7 +44,6 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
         .balance-container {
             background: rgba(0, 0, 0, 0.3);
             padding: 12px 20px;
@@ -58,17 +54,14 @@
             margin: 10px 0;
             border: 1px solid rgba(245, 200, 66, 0.2);
         }
-        
         .balance-icon {
             font-size: 24px;
         }
-        
         .balance-amount {
             font-size: 22px;
             font-weight: bold;
             color: #f5c842;
         }
-        
         #spinCanvas {
             display: block;
             width: 100%;
@@ -77,19 +70,15 @@
             aspect-ratio: 1/1;
             margin: 0 auto 20px;
             border-radius: 50%;
-            box-shadow: 
-                0 0 30px rgba(245, 200, 66, 0.1),
-                inset 0 0 30px rgba(245, 200, 66, 0.05);
+            box-shadow: 0 0 30px rgba(245, 200, 66, 0.1);
             background: #2d3a5e;
             cursor: pointer;
             touch-action: manipulation;
             transition: transform 0.3s ease;
         }
-        
         #spinCanvas:active {
             transform: scale(0.98);
         }
-        
         .status-box {
             background: rgba(0, 0, 0, 0.3);
             padding: 15px;
@@ -104,12 +93,10 @@
             align-items: center;
             justify-content: center;
         }
-        
         .status-box .emoji {
             font-size: 24px;
             margin-right: 10px;
         }
-        
         #spinBtn {
             background: linear-gradient(145deg, #f5c842, #d4a021);
             border: none;
@@ -124,30 +111,10 @@
             transition: all 0.3s ease;
             cursor: pointer;
             letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
         }
-        
-        #spinBtn::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transform: rotate(45deg);
-            transition: all 0.5s ease;
-        }
-        
-        #spinBtn:hover:not(:disabled)::before {
-            left: 100%;
-        }
-        
         #spinBtn:active:not(:disabled) {
             transform: scale(0.95);
         }
-        
         #spinBtn:disabled {
             background: #444;
             color: #888;
@@ -155,7 +122,6 @@
             cursor: not-allowed;
             opacity: 0.6;
         }
-        
         .timer {
             font-size: 18px;
             color: #ff6b6b;
@@ -164,46 +130,18 @@
             text-align: center;
             font-family: 'Courier New', monospace;
         }
-        
         .footer {
             margin-top: 20px;
             text-align: center;
             color: rgba(255, 255, 255, 0.3);
             font-size: 12px;
         }
-        
-        .prize-history {
-            margin-top: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            padding: 10px;
-            max-height: 80px;
-            overflow-y: auto;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
-            display: none;
-        }
-        
-        /* Анимация для выигрыша */
         @keyframes winPulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
-        
         .win-animation {
             animation: winPulse 0.5s ease 3;
-        }
-        
-        /* Стилизация скролла */
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(245, 200, 66, 0.3);
-            border-radius: 2px;
         }
     </style>
 </head>
@@ -275,11 +213,8 @@
             
             ctx.clearRect(0, 0, width, height);
             
-            // Тень
             ctx.shadowColor = 'rgba(0,0,0,0.3)';
             ctx.shadowBlur = 30;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 10;
             
             for (let i = 0; i < segments.length; i++) {
                 const startAngle = rotation + i * segmentAngle;
@@ -290,7 +225,6 @@
                 ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 ctx.closePath();
                 
-                // Градиент для каждого сектора
                 const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
                 gradient.addColorStop(0, lightenColor(segments[i].color, 30));
                 gradient.addColorStop(1, segments[i].color);
@@ -302,7 +236,6 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
-                // Текст
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(startAngle + segmentAngle / 2);
@@ -318,7 +251,6 @@
                 ctx.restore();
             }
             
-            // Центральный круг
             ctx.shadowBlur = 0;
             const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 30);
             gradient.addColorStop(0, '#ffd700');
@@ -331,7 +263,6 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // Стрелка указатель
             const pointerY = 15;
             ctx.shadowColor = 'rgba(255,215,0,0.5)';
             ctx.shadowBlur = 20;
@@ -345,7 +276,6 @@
             ctx.shadowBlur = 0;
         }
         
-        // Вспомогательная функция для осветления цвета
         function lightenColor(color, percent) {
             const num = parseInt(color.replace('#',''), 16);
             const amt = Math.round(2.55 * percent);
@@ -404,7 +334,6 @@
                         value: prize.value
                     };
                     
-                    // Отправка результата боту
                     tg.sendData('spin_result:' + JSON.stringify(prizeData));
                     
                     isSpinning = false;
@@ -438,7 +367,6 @@
         
         function updateBalance(balance) {
             balanceDisplay.textContent = balance;
-            // Анимация при обновлении
             balanceDisplay.parentElement.classList.add('win-animation');
             setTimeout(() => {
                 balanceDisplay.parentElement.classList.remove('win-animation');
@@ -475,7 +403,6 @@
                         updateBalance(data.balance);
                     }
                     
-                    // Таймер обратного отсчета
                     if (window.timerInterval) clearInterval(window.timerInterval);
                     let remaining = data.wait_time;
                     window.timerInterval = setInterval(() => {
@@ -487,12 +414,10 @@
                         }
                     }, 1000);
                 } else if (data.status === 'success') {
-                    // Успешное вращение
                     updateStatus('🎉', `Выиграно ${data.prize} монет!`);
                     if (data.new_balance !== undefined) {
                         updateBalance(data.new_balance);
                     }
-                    // Показываем уведомление в Telegram
                     tg.showPopup({
                         title: '🎉 Поздравляем!',
                         message: `Вы выиграли ${data.value} монет!`,
@@ -503,7 +428,6 @@
                 }
             } catch (e) {
                 console.error('Ошибка парсинга:', e);
-                // Если ответ не JSON - это простое текстовое сообщение
                 updateStatus('📨', event.data);
             }
         });
@@ -516,10 +440,8 @@
             if (canSpin && !isSpinning) spinWheel();
         });
         
-        // Запрос статуса при загрузке
         setTimeout(checkStatus, 500);
         
-        // Настройка внешнего вида Telegram App
         tg.setHeaderColor('#1a1a2e');
         tg.setBackgroundColor('#1a1a2e');
         

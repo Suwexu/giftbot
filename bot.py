@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiohttp import web
+from aiohttp.web import middleware
 import aiosqlite
 from dotenv import load_dotenv
 
@@ -31,6 +32,17 @@ if not API_TOKEN:
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
+
+# ========== MIDDLEWARE ДЛЯ CORS ==========
+
+@middleware
+async def cors_middleware(request, handler):
+    """Добавление CORS заголовков для работы мини-приложения"""
+    response = await handler(request)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
 
 # ========== БАЗА ДАННЫХ ==========
 
@@ -239,8 +251,8 @@ async def healthcheck(request):
 async def main():
     await init_db()
     
-    # Создаем приложение
-    app = web.Application()
+    # Создаем приложение с CORS
+    app = web.Application(middlewares=[cors_middleware])
     app.router.add_get('/health', healthcheck)
     app.router.add_post('/webhook', handle_webhook)
     app.router.add_static('/static/', path='static/', name='static', show_index=True)
@@ -261,7 +273,6 @@ async def main():
         logger.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
     except Exception as e:
         logger.error(f"❌ Ошибка установки webhook: {e}")
-        # Если webhook не работает, пробуем polling
         logger.info("🔄 Переключаемся на polling...")
         await bot.delete_webhook()
         await dp.start_polling(bot)

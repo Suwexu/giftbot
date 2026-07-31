@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест связи</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <h1>🧪 Тест связи с ботом</h1>
+    <div id="status">Нажмите кнопку</div>
+    <button onclick="sendTest()">📤 Отправить тест</button>
+    <div id="log" style="margin-top:20px;background:#1a1a2e;color:#fff;padding:10px;border-radius:8px;font-family:monospace;font-size:12px;min-height:100px;white-space:pre-wrap;"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        function log(msg) {
+            document.getElementById('log').textContent += new Date().toLocaleTimeString() + ': ' + msg + '\n';
+            console.log(msg);
+        }
+
+        function sendTest() {
+            log('📤 Отправка тестового сообщения...');
+            try {
+                tg.sendData('test_message');
+                log('✅ Отправлено через tg.sendData()');
+            } catch (e) {
+                log('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        // Обработка ответов
+        tg.onEvent('message', (event) => {
+            log('📨 Получен ответ: ' + event.data);
+        });
+
+        log('✅ Тестовая страница загружена');
+        log('👤 User ID: ' + (tg.initDataUnsafe?.user?.id || 'неизвестно'));
+    </script>
+</body>
+</html>

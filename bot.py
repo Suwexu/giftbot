@@ -6,8 +6,6 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
-from aiohttp import web
-from aiohttp.web import middleware
 import aiosqlite
 from dotenv import load_dotenv
 
@@ -23,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Конфигурация
 API_TOKEN = os.getenv('BOT_TOKEN')
-WEBAPP_URL = os.getenv('WEBAPP_URL', '')
 PORT = int(os.getenv('PORT', 8080))
 
 if not API_TOKEN:
@@ -31,17 +28,6 @@ if not API_TOKEN:
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
-
-# ========== MIDDLEWARE ДЛЯ CORS ==========
-
-@middleware
-async def cors_middleware(request, handler):
-    """Добавление CORS заголовков для работы мини-приложения"""
-    response = await handler(request)
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return response
 
 # ========== БАЗА ДАННЫХ ==========
 
@@ -59,8 +45,6 @@ async def init_db():
             logger.info("✅ База данных готова")
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации БД: {e}")
-
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
 async def get_user_balance(user_id: int) -> int:
     """Получение баланса пользователя"""
@@ -115,7 +99,7 @@ async def start_command(message: types.Message):
     # Кнопка с мини-приложением
     web_app_button = InlineKeyboardButton(
         text="🎡 Крутить колесо",
-        web_app=WebAppInfo(url=WEBAPP_URL + 'index.html')
+        web_app=WebAppInfo(url="https://giftbot-production-3dd4.up.railway.app/static/index.html")
     )
     
     # Кнопка для проверки баланса
@@ -144,18 +128,17 @@ async def check_balance(callback: types.CallbackQuery):
     
     await callback.answer(f"💰 Твой баланс: {balance} монет", show_alert=True)
 
-# ========== ОБРАБОТЧИК ЗАПРОСОВ ИЗ MINI APP ==========
+# ========== ГЛАВНЫЙ ОБРАБОТЧИК MINI APP ==========
 
 @dp.message(lambda message: message.web_app_data is not None)
 async def handle_web_app_data(message: types.Message):
     """
-    ГЛАВНЫЙ ОБРАБОТЧИК ДЛЯ MINI APP
-    Принимает данные из tg.sendData() и отправляет ответ
+    ОБРАБОТЧИК ВСЕХ ЗАПРОСОВ ИЗ МИНИ-ПРИЛОЖЕНИЯ
     """
     user_id = message.from_user.id
     data = message.web_app_data.data
     
-    logger.info(f"📩 Получен запрос от {user_id}: {data[:100]}...")
+    logger.info(f"📩 ПОЛУЧЕН ЗАПРОС от {user_id}: {data[:100]}...")
     
     # Обработка запроса статуса
     if data == 'get_status':
@@ -184,7 +167,7 @@ async def get_status_handler(message: types.Message):
             'wait_time': 0,
             'balance': balance
         }
-        logger.info(f"✅ Пользователь {user_id} может крутить")
+        logger.info(f"✅ Пользователь {user_id} МОЖЕТ крутить")
     else:
         wait_seconds = 86400 - time_diff
         response = {
@@ -194,9 +177,9 @@ async def get_status_handler(message: types.Message):
         }
         logger.info(f"⏳ Пользователь {user_id} должен ждать {wait_seconds} сек")
     
-    # ОТВЕТ ОТПРАВЛЯЕТСЯ ЧЕРЕЗ message.answer()
+    # ОТПРАВЛЯЕМ ОТВЕТ
     await message.answer(json.dumps(response))
-    logger.info(f"📤 Ответ отправлен для {user_id}")
+    logger.info(f"📤 ОТВЕТ ОТПРАВЛЕН для {user_id}")
 
 async def spin_result_handler(message: types.Message):
     """Обработка результата вращения колеса"""
@@ -275,12 +258,15 @@ async def spin_result_handler(message: types.Message):
             f"🔄 Попробуй снова через 24 часа!"
         )
 
-# ========== ЗАПУСК БОТА В POLLING-РЕЖИМЕ ==========
+# ========== ЗАПУСК БОТА ==========
 
-async def on_startup():
-    """Действия при запуске бота"""
-    logger.info("🚀 Бот запускается в polling-режиме...")
+async def main():
+    """Основная функция запуска"""
+    # Инициализация БД
     await init_db()
+    
+    # Запускаем polling
+    logger.info("🚀 Бот запускается в polling-режиме...")
     
     # Удаляем старый webhook, если был
     try:
@@ -289,31 +275,6 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"⚠️ Ошибка удаления webhook: {e}")
     
-    logger.info("🔄 Бот готов к работе!")
-
-async def main():
-    """Основная функция запуска"""
-    # Запускаем сервер для статики и healthcheck
-    app = web.Application(middlewares=[cors_middleware])
-    
-    # Добавляем маршруты
-    app.router.add_get('/health', lambda req: web.Response(text="OK"))
-    app.router.add_static('/static/', path='static/', name='static', show_index=True)
-    
-    # Запускаем сервер
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, host='0.0.0.0', port=PORT)
-    await site.start()
-    
-    logger.info(f"🌐 Сервер запущен на порту {PORT}")
-    logger.info(f"📁 Статика: {WEBAPP_URL}")
-    logger.info(f"❤️ Healthcheck: {WEBAPP_URL.rstrip('/static/')}/health")
-    
-    # Инициализация бота
-    await on_startup()
-    
-    # ЗАПУСКАЕМ POLLING
     logger.info("🔄 Запуск polling...")
     await dp.start_polling(bot)
 

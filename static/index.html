@@ -6,7 +6,11 @@
     <title>Колесо Бонусов</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             display: flex;
@@ -125,9 +129,11 @@
             border-radius: 8px;
             margin-top: 10px;
             font-size: 12px;
-            color: #888;
-            max-height: 100px;
+            color: #aaa;
+            max-height: 150px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
             display: none;
         }
     </style>
@@ -195,14 +201,23 @@
         let isSpinning = false;
         let canSpin = false;
         let timerInterval = null;
+        let isWaitingForResponse = false;
 
         // ============================================================
         // 4. ОТЛАДКА
         // ============================================================
-        function addDebug(msg) {
-            console.log('🐛', msg);
+        function addDebug(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const icons = {
+                info: 'ℹ️',
+                success: '✅',
+                error: '❌',
+                warning: '⚠️'
+            };
+            const icon = icons[type] || 'ℹ️';
+            console.log(`${icon} ${msg}`);
             debugInfo.style.display = 'block';
-            debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            debugInfo.innerHTML += `<div>${time}: ${icon} ${msg}</div>`;
             debugInfo.scrollTop = debugInfo.scrollHeight;
         }
 
@@ -302,57 +317,43 @@
         }
 
         // ============================================================
-        // 7. ОТПРАВКА ДАННЫХ БОТУ (ГЛАВНОЕ!)
+        // 7. ОТПРАВКА ДАННЫХ БОТУ
         // ============================================================
         function sendToBot(data) {
-            addDebug(`📤 Отправка: ${data}`);
-            console.log('📤 Отправка в бота:', data);
+            if (isWaitingForResponse) {
+                addDebug('⏳ Уже ждём ответ, пропускаем', 'warning');
+                return;
+            }
             
-            // СПОСОБ 1: Через Telegram WebApp (основной)
+            isWaitingForResponse = true;
+            addDebug(`📤 Отправка: ${data}`, 'info');
+            
             try {
                 tg.sendData(data);
-                addDebug('✅ Отправлено через tg.sendData()');
-                return true;
+                addDebug('✅ Отправлено через tg.sendData()', 'success');
+                
+                // Таймаут на случай, если ответа нет 30 секунд
+                setTimeout(() => {
+                    if (isWaitingForResponse) {
+                        isWaitingForResponse = false;
+                        addDebug('⏰ Таймаут: ответа нет 30 секунд', 'error');
+                        updateStatus('⚠️', 'Нет ответа от сервера. Проверьте интернет.', true);
+                        spinBtn.disabled = true;
+                    }
+                }, 30000);
+                
             } catch (e) {
-                addDebug(`❌ Ошибка tg.sendData(): ${e.message}`);
-                console.error('Ошибка tg.sendData:', e);
+                isWaitingForResponse = false;
+                addDebug(`❌ Ошибка отправки: ${e.message}`, 'error');
+                updateStatus('❌', 'Ошибка отправки', true);
             }
-            
-            // СПОСОБ 2: Резервный через fetch (если tg.sendData не работает)
-            try {
-                const webhookUrl = 'https://giftbot-production-3dd4.up.railway.app/webhook';
-                // Отправляем как POST запрос напрямую
-                fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: {
-                            text: data,
-                            from: { id: tg.initDataUnsafe?.user?.id || 0 }
-                        }
-                    })
-                }).then(response => {
-                    addDebug(`📥 Ответ fetch: ${response.status}`);
-                }).catch(err => {
-                    addDebug(`❌ Ошибка fetch: ${err.message}`);
-                });
-                addDebug('🔄 Отправлено через fetch (резерв)');
-                return true;
-            } catch (e2) {
-                addDebug(`❌ Ошибка fetch: ${e2.message}`);
-            }
-            
-            addDebug('❌ НЕ УДАЛОСЬ отправить данные!');
-            return false;
         }
 
         // ============================================================
         // 8. ПРОВЕРКА СТАТУСА
         // ============================================================
         function checkStatus() {
-            addDebug('🔍 Проверка статуса...');
+            addDebug('🔍 Проверка статуса...', 'info');
             updateStatus('⏳', 'Проверка...');
             spinBtn.disabled = true;
             sendToBot('get_status');
@@ -363,7 +364,7 @@
         // ============================================================
         function spinWheel() {
             if (isSpinning || !canSpin) {
-                addDebug('⚠️ Вращение заблокировано');
+                addDebug('⚠️ Вращение заблокировано', 'warning');
                 return;
             }
             isSpinning = true;
@@ -405,15 +406,24 @@
         }
 
         // ============================================================
-        // 10. ОБРАБОТКА ОТВЕТОВ ОТ БОТА
+        // 10. ОБРАБОТКА ОТВЕТОВ ОТ БОТА (ГЛАВНОЕ!)
         // ============================================================
         tg.onEvent('message', (event) => {
-            addDebug(`📨 Получен ответ: ${event.data.substring(0, 100)}...`);
+            // Сбрасываем флаг ожидания, так как ответ получен
+            isWaitingForResponse = false;
+            
+            addDebug(`📨 Получен ответ: ${event.data.substring(0, 100)}...`, 'info');
             console.log('📨 Ответ от бота:', event.data);
+            
+            // Если это служебное сообщение-подтверждение
+            if (event.data === '✅ Данные получены') {
+                addDebug('📨 Бот подтвердил получение', 'success');
+                return;
+            }
             
             try {
                 const data = JSON.parse(event.data);
-                addDebug(`📊 Парсинг: status=${data.status}`);
+                addDebug(`📊 Парсинг: status=${data.status}`, 'info');
                 
                 if (data.status === 'can_spin') {
                     canSpin = true;
@@ -421,12 +431,15 @@
                     updateStatus('🎯', 'Нажми на кнопку или коснись колеса!');
                     timerDisplay.textContent = '';
                     if (data.balance !== undefined) updateBalance(data.balance);
+                    addDebug('🎯 Можно крутить!', 'success');
+                    
                 } else if (data.status === 'wait') {
                     canSpin = false;
                     spinBtn.disabled = true;
                     updateStatus('⏳', 'Кулдаун активен!');
                     updateTimer(data.wait_time);
                     if (data.balance !== undefined) updateBalance(data.balance);
+                    addDebug(`⏳ Ожидание ${data.wait_time} секунд`, 'warning');
                     
                     if (timerInterval) clearInterval(timerInterval);
                     let remaining = data.wait_time;
@@ -439,22 +452,30 @@
                             checkStatus();
                         }
                     }, 1000);
+                    
                 } else if (data.status === 'success') {
                     updateStatus('🎉', `Выиграно ${data.prize} монет!`);
                     if (data.new_balance !== undefined) updateBalance(data.new_balance);
+                    addDebug(`🎉 Выиграно ${data.value} монет!`, 'success');
                     try {
                         tg.showPopup({
                             title: '🎉 Поздравляем!',
                             message: `Вы выиграли ${data.value} монет!`,
                             buttons: [{ type: 'ok' }]
                         });
-                    } catch(e) {}
+                    } catch(e) {
+                        addDebug(`⚠️ Ошибка показа popup: ${e.message}`, 'warning');
+                    }
+                    
                 } else if (data.error) {
                     updateStatus('❌', data.error, true);
+                    addDebug(`❌ Ошибка: ${data.error}`, 'error');
                 }
+                
             } catch (e) {
-                addDebug(`❌ Ошибка парсинга: ${e.message}`);
-                updateStatus('📨', event.data);
+                addDebug(`❌ Ошибка парсинга JSON: ${e.message}`, 'error');
+                // Если не JSON, показываем как текст
+                updateStatus('📨', event.data.substring(0, 50));
             }
         });
 
@@ -470,17 +491,19 @@
         // 12. ЗАПУСК
         // ============================================================
         drawWheel(0);
-        addDebug('🎡 Приложение загружено');
+        addDebug('🎡 Приложение загружено', 'success');
         
         // Запрос статуса через 1 секунду
         setTimeout(checkStatus, 1000);
 
-        // Повторная проверка через 30 секунд
+        // Повторная проверка через 30 секунд, если всё ещё висит
         setTimeout(() => {
             const statusText = statusMsg.textContent || '';
             if (statusText.includes('Проверка') || statusText.includes('Загрузка')) {
-                addDebug('🔄 Повторная проверка (таймаут)');
-                checkStatus();
+                addDebug('🔄 Повторная проверка (таймаут 30с)', 'warning');
+                if (!isWaitingForResponse) {
+                    checkStatus();
+                }
             }
         }, 30000);
 

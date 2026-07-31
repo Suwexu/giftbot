@@ -6,6 +6,7 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
+from aiohttp import web
 import aiosqlite
 from dotenv import load_dotenv
 
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Конфигурация
 API_TOKEN = os.getenv('BOT_TOKEN')
+PORT = int(os.getenv('PORT', 8080))
 
 if not API_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения!")
@@ -131,18 +133,14 @@ async def check_balance(callback: types.CallbackQuery):
 
 @dp.message(lambda message: message.web_app_data is not None)
 async def handle_web_app_data(message: types.Message):
-    """
-    ОБРАБОТЧИК ВСЕХ ЗАПРОСОВ ИЗ МИНИ-ПРИЛОЖЕНИЯ
-    """
+    """Обработчик всех запросов из мини-приложения"""
     user_id = message.from_user.id
     data = message.web_app_data.data
     
     logger.info(f"📩 ПОЛУЧЕН ЗАПРОС от {user_id}: {data[:100]}...")
     
-    # Обработка запроса статуса
     if data == 'get_status':
         await get_status_handler(message)
-    # Обработка результата вращения
     elif data.startswith('spin_result:'):
         await spin_result_handler(message)
     else:
@@ -160,7 +158,7 @@ async def get_status_handler(message: types.Message):
     time_diff = now - last_spin
     balance = await get_user_balance(user_id)
     
-    if time_diff >= 86400:  # 24 часа прошло
+    if time_diff >= 86400:
         response = {
             'status': 'can_spin',
             'wait_time': 0,
@@ -176,7 +174,6 @@ async def get_status_handler(message: types.Message):
         }
         logger.info(f"⏳ Пользователь {user_id} должен ждать {wait_seconds} сек")
     
-    # ОТПРАВЛЯЕМ ОТВЕТ
     await message.answer(json.dumps(response))
     logger.info(f"📤 ОТВЕТ ОТПРАВЛЕН для {user_id}")
 
@@ -197,7 +194,6 @@ async def spin_result_handler(message: types.Message):
         }))
         return
     
-    # Проверка времени (защита от читов)
     last_spin = await get_last_spin_time(user_id)
     now = int(time.time())
     
@@ -209,7 +205,6 @@ async def spin_result_handler(message: types.Message):
         }))
         return
     
-    # Обновление данных в БД
     try:
         async with aiosqlite.connect('users.db') as db:
             await db.execute(
@@ -232,7 +227,6 @@ async def spin_result_handler(message: types.Message):
     
     new_balance = await get_user_balance(user_id)
     
-    # Отправляем ответ в мини-приложение
     response = {
         'status': 'success',
         'prize': prize_name,
@@ -242,7 +236,6 @@ async def spin_result_handler(message: types.Message):
     await message.answer(json.dumps(response))
     logger.info(f"🎉 Успешное вращение для {user_id}: +{prize_value} монет")
     
-    # Отправляем уведомление в чат
     if prize_value > 0:
         await message.answer(
             f"🎉 Поздравляю, {message.from_user.first_name}!\n\n"
@@ -257,32 +250,55 @@ async def spin_result_handler(message: types.Message):
             f"🔄 Попробуй снова через 24 часа!"
         )
 
-# ========== ЗАПУСК БОТА ==========
+# ========== HTTP СЕРВЕР ДЛЯ HEALTHCHECK ==========
+
+async def healthcheck(request):
+    """Healthcheck для Railway"""
+    return web.Response(text="OK", status=200)
+
+async def start_http_server():
+    """Запуск HTTP сервера для healthcheck"""
+    app = web.Application()
+    app.router.add_get('/health', healthcheck)
+    app.router.add_static('/static/', path='static/', name='static', show_index=True)
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host='0.0.0.0', port=PORT)
+    await site.start()
+    logger.info(f"🌐 HTTP сервер запущен на порту {PORT}")
+    logger.info(f"❤️ Healthcheck: /health")
+    logger.info(f"📁 Статика: https://giftbot-production-3dd4.up.railway.app/static/")
+
+# ========== ЗАПУСК ==========
 
 async def main():
     """Основная функция запуска"""
     # Инициализация БД
     await init_db()
     
+    # Запускаем HTTP сервер в фоне
+    asyncio.create_task(start_http_server())
+    
+    # Небольшая задержка, чтобы сервер точно запустился
+    await asyncio.sleep(1)
+    
     logger.info("🚀 Бот запускается в polling-режиме...")
     
-    # ПРИНУДИТЕЛЬНО ОСТАНАВЛИВАЕМ ВСЕ СТАРЫЕ ПОЛЛИНГИ
+    # Принудительно останавливаем старые polling
     try:
-        logger.info("🔄 Останавливаем все старые polling...")
         await bot.delete_webhook(drop_pending_updates=True)
         logger.info("✅ Webhook удалён")
     except Exception as e:
         logger.warning(f"⚠️ Ошибка удаления webhook: {e}")
     
-    # Ждём 2 секунды, чтобы Telegram точно обработал
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
     
     logger.info("🔄 Запуск polling...")
     try:
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"❌ Ошибка polling: {e}")
-        # Повторная попытка через 5 секунд
         await asyncio.sleep(5)
         logger.info("🔄 Повторная попытка запуска polling...")
         await dp.start_polling(bot)

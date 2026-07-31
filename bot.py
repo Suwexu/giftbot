@@ -245,9 +245,12 @@ async def main():
     app = web.Application()
     
     # Добавляем маршруты
-    app.router.add_get('/health', healthcheck)  # <-- ОТДЕЛЬНЫЙ ПУТЬ ДЛЯ HEALTHCHECK
+    app.router.add_get('/health', healthcheck)
     app.router.add_post('/webhook', handle_webhook)
-    app.router.add_static('/static/', path='static/', name='static')
+    
+    # ПРАВИЛЬНАЯ НАСТРОЙКА СТАТИКИ
+    # Указываем путь к папке static и разрешаем доступ ко всем файлам
+    app.router.add_static('/static/', path='static/', name='static', show_index=True)
     
     # Запускаем сервер
     runner = web.AppRunner(app)

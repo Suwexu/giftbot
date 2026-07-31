@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Конфигурация
 API_TOKEN = os.getenv('BOT_TOKEN')
-PORT = int(os.getenv('PORT', 8080))
 
 if not API_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения!")
@@ -265,18 +264,28 @@ async def main():
     # Инициализация БД
     await init_db()
     
-    # Запускаем polling
     logger.info("🚀 Бот запускается в polling-режиме...")
     
-    # Удаляем старый webhook, если был
+    # ПРИНУДИТЕЛЬНО ОСТАНАВЛИВАЕМ ВСЕ СТАРЫЕ ПОЛЛИНГИ
     try:
-        await bot.delete_webhook()
+        logger.info("🔄 Останавливаем все старые polling...")
+        await bot.delete_webhook(drop_pending_updates=True)
         logger.info("✅ Webhook удалён")
     except Exception as e:
         logger.warning(f"⚠️ Ошибка удаления webhook: {e}")
     
+    # Ждём 2 секунды, чтобы Telegram точно обработал
+    await asyncio.sleep(2)
+    
     logger.info("🔄 Запуск polling...")
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"❌ Ошибка polling: {e}")
+        # Повторная попытка через 5 секунд
+        await asyncio.sleep(5)
+        logger.info("🔄 Повторная попытка запуска polling...")
+        await dp.start_polling(bot)
 
 if __name__ == '__main__':
     try:

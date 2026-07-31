@@ -6,11 +6,7 @@
     <title>Колесо Бонусов</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             display: flex;
@@ -20,7 +16,6 @@
             min-height: 100vh;
             font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
             padding: 15px;
-            overflow-x: hidden;
         }
         .container {
             background: rgba(255, 255, 255, 0.05);
@@ -32,10 +27,7 @@
             max-width: 500px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        .header { text-align: center; margin-bottom: 20px; }
         .header h1 {
             font-size: 26px;
             background: linear-gradient(90deg, #f5c842, #ff6b6b);
@@ -53,14 +45,7 @@
             margin: 10px 0;
             border: 1px solid rgba(245, 200, 66, 0.2);
         }
-        .balance-icon {
-            font-size: 24px;
-        }
-        .balance-amount {
-            font-size: 22px;
-            font-weight: bold;
-            color: #f5c842;
-        }
+        .balance-amount { font-size: 22px; font-weight: bold; color: #f5c842; }
         #spinCanvas {
             display: block;
             width: 100%;
@@ -73,10 +58,6 @@
             background: #2d3a5e;
             cursor: pointer;
             touch-action: manipulation;
-            transition: transform 0.3s ease;
-        }
-        #spinCanvas:active {
-            transform: scale(0.98);
         }
         .status-box {
             background: rgba(0, 0, 0, 0.3);
@@ -86,21 +67,17 @@
             font-size: 16px;
             text-align: center;
             color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.05);
             min-height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            word-break: break-word;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .status-box .emoji {
-            font-size: 24px;
-            margin-right: 10px;
-        }
+        .status-box .emoji { font-size: 24px; margin-right: 10px; }
         .status-box .retry-btn {
-            margin-left: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
             color: #fff;
             padding: 5px 15px;
             border-radius: 20px;
@@ -118,12 +95,8 @@
             width: 100%;
             max-width: 280px;
             box-shadow: 0 5px 25px rgba(245, 200, 66, 0.3);
-            transition: all 0.3s ease;
             cursor: pointer;
-            letter-spacing: 1px;
-        }
-        #spinBtn:active:not(:disabled) {
-            transform: scale(0.95);
+            transition: opacity 0.3s;
         }
         #spinBtn:disabled {
             background: #444;
@@ -146,65 +119,51 @@
             color: rgba(255, 255, 255, 0.3);
             font-size: 12px;
         }
-        @keyframes winPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        .win-animation {
-            animation: winPulse 0.5s ease 3;
-        }
-        .error-text {
-            color: #ff6b6b !important;
-        }
-        .success-text {
-            color: #69db7c !important;
+        .debug-info {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+            max-height: 100px;
+            overflow-y: auto;
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🎡 Колесо Бонусов</h1>
-        </div>
-        
+        <div class="header"><h1>🎡 Колесо Бонусов</h1></div>
         <div class="balance-container">
-            <span class="balance-icon">💰</span>
+            <span>💰</span>
             <span class="balance-amount" id="balanceDisplay">0</span>
         </div>
-        
         <canvas id="spinCanvas" width="600" height="600"></canvas>
-        
         <div class="status-box" id="statusMessage">
             <span class="emoji">⏳</span>
             <span>Загрузка...</span>
         </div>
-        
         <div style="text-align: center;">
             <button id="spinBtn" disabled>🎰 Крутить!</button>
         </div>
-        
         <div id="timerDisplay" class="timer"></div>
-        
-        <div class="footer">
-            Вращение доступно раз в 24 часа
-        </div>
+        <div class="footer">Вращение доступно раз в 24 часа</div>
+        <div id="debugInfo" class="debug-info"></div>
     </div>
 
     <script>
         // ============================================================
-        // 1. ИНИЦИАЛИЗАЦИЯ WEB APP
+        // 1. ИНИЦИАЛИЗАЦИЯ
         // ============================================================
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
         
-        // Настройка внешнего вида
-        try {
-            tg.setHeaderColor('#1a1a2e');
-            tg.setBackgroundColor('#1a1a2e');
-        } catch (e) {
-            console.log('Ошибка настройки темы:', e);
-        }
+        console.log('🚀 Telegram WebApp загружен');
+        console.log('📱 Платформа:', tg.platform);
+        console.log('📦 Версия:', tg.version);
+        console.log('👤 User ID:', tg.initDataUnsafe?.user?.id || 'неизвестно');
 
         // ============================================================
         // 2. НАСТРОЙКИ КОЛЕСА
@@ -229,108 +188,86 @@
         const statusMsg = document.getElementById('statusMessage');
         const timerDisplay = document.getElementById('timerDisplay');
         const balanceDisplay = document.getElementById('balanceDisplay');
+        const debugInfo = document.getElementById('debugInfo');
 
         const segmentAngle = (2 * Math.PI) / segments.length;
         let currentRotation = 0;
         let isSpinning = false;
         let canSpin = false;
-        let statusTimeout = null;
         let timerInterval = null;
 
         // ============================================================
-        // 4. РИСОВАНИЕ КОЛЕСА
+        // 4. ОТЛАДКА
+        // ============================================================
+        function addDebug(msg) {
+            console.log('🐛', msg);
+            debugInfo.style.display = 'block';
+            debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+
+        // ============================================================
+        // 5. РИСОВАНИЕ КОЛЕСА
         // ============================================================
         function drawWheel(rotation) {
-            const width = canvas.width;
-            const height = canvas.height;
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = Math.min(width, height) / 2 * 0.88;
-            
+            const width = canvas.width, height = canvas.height;
+            const centerX = width/2, centerY = height/2;
+            const radius = Math.min(width, height)/2 * 0.88;
             ctx.clearRect(0, 0, width, height);
-            
             ctx.shadowColor = 'rgba(0,0,0,0.3)';
             ctx.shadowBlur = 30;
             
             for (let i = 0; i < segments.length; i++) {
                 const startAngle = rotation + i * segmentAngle;
                 const endAngle = startAngle + segmentAngle;
-                
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 ctx.closePath();
-                
-                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-                gradient.addColorStop(0, lightenColor(segments[i].color, 30));
-                gradient.addColorStop(1, segments[i].color);
-                ctx.fillStyle = gradient;
+                ctx.fillStyle = segments[i].color;
                 ctx.fill();
-                
-                ctx.shadowBlur = 0;
                 ctx.strokeStyle = 'rgba(255,255,255,0.3)';
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
                 ctx.save();
                 ctx.translate(centerX, centerY);
-                ctx.rotate(startAngle + segmentAngle / 2);
+                ctx.rotate(startAngle + segmentAngle/2);
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                
-                const textRadius = radius * 0.65;
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 24px -apple-system, "Segoe UI", Roboto, sans-serif';
+                ctx.font = 'bold 24px Arial';
                 ctx.shadowColor = 'rgba(0,0,0,0.5)';
                 ctx.shadowBlur = 10;
-                ctx.fillText(segments[i].label, textRadius, 0);
+                ctx.fillText(segments[i].label, radius * 0.65, 0);
                 ctx.restore();
             }
             
-            // Центральный круг
             ctx.shadowBlur = 0;
-            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 30);
-            gradient.addColorStop(0, '#ffd700');
-            gradient.addColorStop(1, '#f5a623');
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 25, 0, 2 * Math.PI);
-            ctx.fillStyle = gradient;
+            ctx.arc(centerX, centerY, 25, 0, 2*Math.PI);
+            ctx.fillStyle = '#ffd700';
             ctx.fill();
             ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // Стрелка
-            const pointerY = 15;
             ctx.shadowColor = 'rgba(255,215,0,0.5)';
             ctx.shadowBlur = 20;
             ctx.beginPath();
-            ctx.moveTo(centerX - 15, pointerY);
-            ctx.lineTo(centerX + 15, pointerY);
-            ctx.lineTo(centerX, pointerY + 30);
+            ctx.moveTo(centerX-15, 15);
+            ctx.lineTo(centerX+15, 15);
+            ctx.lineTo(centerX, 45);
             ctx.closePath();
             ctx.fillStyle = '#ffd700';
             ctx.fill();
             ctx.shadowBlur = 0;
         }
 
-        function lightenColor(color, percent) {
-            const num = parseInt(color.replace('#',''), 16);
-            const amt = Math.round(2.55 * percent);
-            const R = Math.min(255, (num >> 16) + amt);
-            const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
-            const B = Math.min(255, (num & 0x0000FF) + amt);
-            return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
-        }
-
-        // ============================================================
-        // 5. ОПРЕДЕЛЕНИЕ ВЫИГРЫША
-        // ============================================================
         function getPrize(rotation) {
-            const pointerAngle = -Math.PI / 2;
-            let rawAngle = (pointerAngle - rotation) % (2 * Math.PI);
-            if (rawAngle < 0) rawAngle += 2 * Math.PI;
-            
+            const pointerAngle = -Math.PI/2;
+            let rawAngle = (pointerAngle - rotation) % (2*Math.PI);
+            if (rawAngle < 0) rawAngle += 2*Math.PI;
             const index = Math.floor(rawAngle / segmentAngle) % segments.length;
             return {
                 index: index,
@@ -340,10 +277,95 @@
         }
 
         // ============================================================
-        // 6. АНИМАЦИЯ ВРАЩЕНИЯ
+        // 6. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
+        // ============================================================
+        function updateStatus(emoji, text, isError = false) {
+            const emojiSpan = `<span class="emoji">${emoji}</span>`;
+            const textSpan = `<span style="${isError ? 'color:#ff6b6b;' : ''}">${text}</span>`;
+            const retryBtn = isError ? `<button class="retry-btn" onclick="checkStatus()">🔄 Повторить</button>` : '';
+            statusMsg.innerHTML = emojiSpan + textSpan + retryBtn;
+        }
+
+        function updateTimer(seconds) {
+            if (seconds <= 0) {
+                timerDisplay.textContent = '';
+                return;
+            }
+            const hours = Math.floor(seconds/3600);
+            const mins = Math.floor((seconds%3600)/60);
+            const secs = seconds%60;
+            timerDisplay.textContent = `⏳ ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        }
+
+        function updateBalance(balance) {
+            balanceDisplay.textContent = balance;
+        }
+
+        // ============================================================
+        // 7. ОТПРАВКА ДАННЫХ БОТУ (ГЛАВНОЕ!)
+        // ============================================================
+        function sendToBot(data) {
+            addDebug(`📤 Отправка: ${data}`);
+            console.log('📤 Отправка в бота:', data);
+            
+            // СПОСОБ 1: Через Telegram WebApp (основной)
+            try {
+                tg.sendData(data);
+                addDebug('✅ Отправлено через tg.sendData()');
+                return true;
+            } catch (e) {
+                addDebug(`❌ Ошибка tg.sendData(): ${e.message}`);
+                console.error('Ошибка tg.sendData:', e);
+            }
+            
+            // СПОСОБ 2: Резервный через fetch (если tg.sendData не работает)
+            try {
+                const webhookUrl = 'https://giftbot-production-3dd4.up.railway.app/webhook';
+                // Отправляем как POST запрос напрямую
+                fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: {
+                            text: data,
+                            from: { id: tg.initDataUnsafe?.user?.id || 0 }
+                        }
+                    })
+                }).then(response => {
+                    addDebug(`📥 Ответ fetch: ${response.status}`);
+                }).catch(err => {
+                    addDebug(`❌ Ошибка fetch: ${err.message}`);
+                });
+                addDebug('🔄 Отправлено через fetch (резерв)');
+                return true;
+            } catch (e2) {
+                addDebug(`❌ Ошибка fetch: ${e2.message}`);
+            }
+            
+            addDebug('❌ НЕ УДАЛОСЬ отправить данные!');
+            return false;
+        }
+
+        // ============================================================
+        // 8. ПРОВЕРКА СТАТУСА
+        // ============================================================
+        function checkStatus() {
+            addDebug('🔍 Проверка статуса...');
+            updateStatus('⏳', 'Проверка...');
+            spinBtn.disabled = true;
+            sendToBot('get_status');
+        }
+
+        // ============================================================
+        // 9. ВРАЩЕНИЕ КОЛЕСА
         // ============================================================
         function spinWheel() {
-            if (isSpinning || !canSpin) return;
+            if (isSpinning || !canSpin) {
+                addDebug('⚠️ Вращение заблокировано');
+                return;
+            }
             isSpinning = true;
             spinBtn.disabled = true;
             updateStatus('🌀', 'Колесо вращается...');
@@ -357,155 +379,55 @@
             
             function animate(time) {
                 const elapsed = time - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const ease = 1 - Math.pow(1 - progress, 3);
-                const currentAngle = startRotation + targetAngle * ease;
-                currentRotation = currentAngle;
-                drawWheel(currentAngle);
+                const progress = Math.min(elapsed/duration, 1);
+                const ease = 1 - Math.pow(1-progress, 3);
+                currentRotation = startRotation + targetAngle * ease;
+                drawWheel(currentRotation);
                 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     currentRotation = endRotation;
                     drawWheel(endRotation);
-                    
                     const prize = getPrize(endRotation);
-                    const prizeData = {
+                    const data = 'spin_result:' + JSON.stringify({
                         prize_id: prize.index,
                         prize_name: prize.label,
                         value: prize.value
-                    };
-                    
-                    // Отправка результата боту
-                    try {
-                        tg.sendData('spin_result:' + JSON.stringify(prizeData));
-                        updateStatus('📤', 'Результат отправлен...');
-                    } catch (e) {
-                        console.error('Ошибка отправки результата:', e);
-                        updateStatus('❌', 'Не удалось отправить результат');
-                        isSpinning = false;
-                        spinBtn.disabled = true;
-                        return;
-                    }
-                    
-                    isSpinning = false;
-                    spinBtn.disabled = true;
-                    
+                    });
+                    sendToBot(data);
                     updateStatus('🎁', `Выпало: ${prize.label} ${prize.value > 0 ? 'монет' : ''}`);
-                    
-                    // Через 3 секунды проверим статус
-                    setTimeout(() => {
-                        checkStatus();
-                    }, 3000);
+                    isSpinning = false;
+                    setTimeout(checkStatus, 2000);
                 }
             }
             requestAnimationFrame(animate);
         }
 
         // ============================================================
-        // 7. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
-        // ============================================================
-        function updateStatus(emoji, text, isError = false, isSuccess = false) {
-            const emojiSpan = `<span class="emoji">${emoji}</span>`;
-            const textSpan = `<span class="${isError ? 'error-text' : ''} ${isSuccess ? 'success-text' : ''}">${text}</span>`;
-            const retryBtn = isError ? `<button class="retry-btn" onclick="checkStatus()">🔄 Повторить</button>` : '';
-            statusMsg.innerHTML = emojiSpan + textSpan + retryBtn;
-        }
-
-        function updateTimer(seconds) {
-            if (seconds <= 0) {
-                timerDisplay.textContent = '';
-                return;
-            }
-            const hours = Math.floor(seconds / 3600);
-            const mins = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            timerDisplay.textContent = `⏳ ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
-
-        function updateBalance(balance) {
-            balanceDisplay.textContent = balance;
-            balanceDisplay.parentElement.classList.add('win-animation');
-            setTimeout(() => {
-                balanceDisplay.parentElement.classList.remove('win-animation');
-            }, 500);
-        }
-
-        // ============================================================
-        // 8. ПРОВЕРКА СТАТУСА (С ТАЙМАУТОМ)
-        // ============================================================
-        function checkStatus() {
-            updateStatus('⏳', 'Проверка...');
-            spinBtn.disabled = true;
-            
-            // Отменяем предыдущий таймаут
-            if (statusTimeout) {
-                clearTimeout(statusTimeout);
-                statusTimeout = null;
-            }
-            
-            try {
-                tg.sendData('get_status');
-                
-                // Таймаут на случай, если бот не ответит
-                statusTimeout = setTimeout(() => {
-                    updateStatus('⚠️', 'Нет ответа от сервера. Проверьте интернет.', true);
-                    spinBtn.disabled = true;
-                    statusTimeout = null;
-                }, 15000); // 15 секунд
-                
-            } catch (e) {
-                console.error('Ошибка отправки запроса:', e);
-                updateStatus('❌', 'Ошибка соединения с ботом', true);
-                spinBtn.disabled = true;
-            }
-        }
-
-        // ============================================================
-        // 9. ОБРАБОТКА ОШИБОК WEB APP
-        // ============================================================
-        tg.onEvent('error', (error) => {
-            console.error('Ошибка Web App:', error);
-            if (statusTimeout) {
-                clearTimeout(statusTimeout);
-                statusTimeout = null;
-            }
-            updateStatus('❌', 'Ошибка соединения. Проверьте интернет.', true);
-            spinBtn.disabled = true;
-        });
-
-        // ============================================================
         // 10. ОБРАБОТКА ОТВЕТОВ ОТ БОТА
         // ============================================================
         tg.onEvent('message', (event) => {
-            // Очищаем таймаут, так как ответ получен
-            if (statusTimeout) {
-                clearTimeout(statusTimeout);
-                statusTimeout = null;
-            }
+            addDebug(`📨 Получен ответ: ${event.data.substring(0, 100)}...`);
+            console.log('📨 Ответ от бота:', event.data);
             
             try {
                 const data = JSON.parse(event.data);
-                console.log('Ответ от бота:', data);
+                addDebug(`📊 Парсинг: status=${data.status}`);
                 
                 if (data.status === 'can_spin') {
                     canSpin = true;
                     spinBtn.disabled = false;
-                    updateStatus('🎯', 'Нажми на кнопку или коснись колеса!', false, true);
+                    updateStatus('🎯', 'Нажми на кнопку или коснись колеса!');
                     timerDisplay.textContent = '';
-                    if (data.balance !== undefined) {
-                        updateBalance(data.balance);
-                    }
+                    if (data.balance !== undefined) updateBalance(data.balance);
                 } else if (data.status === 'wait') {
                     canSpin = false;
                     spinBtn.disabled = true;
                     updateStatus('⏳', 'Кулдаун активен!');
                     updateTimer(data.wait_time);
-                    if (data.balance !== undefined) {
-                        updateBalance(data.balance);
-                    }
+                    if (data.balance !== undefined) updateBalance(data.balance);
                     
-                    // Таймер обратного отсчета
                     if (timerInterval) clearInterval(timerInterval);
                     let remaining = data.wait_time;
                     timerInterval = setInterval(() => {
@@ -518,33 +440,21 @@
                         }
                     }, 1000);
                 } else if (data.status === 'success') {
-                    updateStatus('🎉', `Выиграно ${data.prize} монет!`, false, true);
-                    if (data.new_balance !== undefined) {
-                        updateBalance(data.new_balance);
-                    }
-                    // Уведомление в Telegram
+                    updateStatus('🎉', `Выиграно ${data.prize} монет!`);
+                    if (data.new_balance !== undefined) updateBalance(data.new_balance);
                     try {
                         tg.showPopup({
                             title: '🎉 Поздравляем!',
                             message: `Вы выиграли ${data.value} монет!`,
                             buttons: [{ type: 'ok' }]
                         });
-                    } catch (e) {
-                        console.log('Popup error:', e);
-                    }
+                    } catch(e) {}
                 } else if (data.error) {
-                    updateStatus('⚠️', data.error, true);
-                } else {
-                    updateStatus('📨', 'Неизвестный ответ от сервера', true);
+                    updateStatus('❌', data.error, true);
                 }
             } catch (e) {
-                console.error('Ошибка парсинга ответа:', e);
-                // Если ответ не JSON - это простое текстовое сообщение
-                if (typeof event.data === 'string' && event.data.length < 200) {
-                    updateStatus('📨', event.data);
-                } else {
-                    updateStatus('❌', 'Ошибка обработки ответа', true);
-                }
+                addDebug(`❌ Ошибка парсинга: ${e.message}`);
+                updateStatus('📨', event.data);
             }
         });
 
@@ -555,34 +465,26 @@
         canvas.addEventListener('click', () => {
             if (canSpin && !isSpinning) spinWheel();
         });
-        
-        // Добавляем кнопку для ручного обновления
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'r' || e.key === 'R') {
-                checkStatus();
-            }
-        });
 
         // ============================================================
-        // 12. ИНИЦИАЛИЗАЦИЯ
+        // 12. ЗАПУСК
         // ============================================================
         drawWheel(0);
+        addDebug('🎡 Приложение загружено');
         
-        // Запрос статуса при загрузке
-        setTimeout(checkStatus, 500);
-        
-        // Повторная проверка через 30 секунд, если что-то пошло не так
+        // Запрос статуса через 1 секунду
+        setTimeout(checkStatus, 1000);
+
+        // Повторная проверка через 30 секунд
         setTimeout(() => {
             const statusText = statusMsg.textContent || '';
-            if (statusText.includes('Проверка...') || statusText.includes('Загрузка...')) {
-                console.log('Повторная проверка статуса...');
+            if (statusText.includes('Проверка') || statusText.includes('Загрузка')) {
+                addDebug('🔄 Повторная проверка (таймаут)');
                 checkStatus();
             }
         }, 30000);
-        
-        console.log('🎡 Колесо бонусов загружено!');
-        console.log('Telegram WebApp версия:', tg.version);
-        console.log('Платформа:', tg.platform);
+
+        console.log('✅ Мини-приложение готово!');
     </script>
 </body>
 </html>

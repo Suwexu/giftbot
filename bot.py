@@ -231,9 +231,14 @@ async def spin_result_handler(message: types.Message):
             f"🔄 Попробуй снова через 24 часа!"
         )
 
-# ========== WEBHOOK ==========
+# ========== ОБРАБОТЧИКИ WEBHOOK ==========
+
+async def webhook_check(request):
+    """Простой обработчик для проверки вебхука Telegram"""
+    return web.Response(text="OK", status=200)
 
 async def handle_webhook(request):
+    """Основной обработчик вебхука"""
     try:
         data = await request.json()
         update = types.Update(**data)
@@ -253,8 +258,11 @@ async def main():
     
     # Создаем приложение с CORS
     app = web.Application(middlewares=[cors_middleware])
+    
+    # Добавляем маршруты
     app.router.add_get('/health', healthcheck)
-    app.router.add_post('/webhook', handle_webhook)
+    app.router.add_get('/webhook', webhook_check)  # <-- ДЛЯ ПРОВЕРКИ TELEGRAM
+    app.router.add_post('/webhook', handle_webhook)  # <-- ОСНОВНОЙ
     app.router.add_static('/static/', path='static/', name='static', show_index=True)
     
     # Запускаем сервер
@@ -269,6 +277,11 @@ async def main():
     
     # Устанавливаем webhook
     try:
+        # Сначала удаляем старый webhook
+        await bot.delete_webhook()
+        logger.info("🔄 Старый webhook удалён")
+        
+        # Устанавливаем новый
         await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
         logger.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
     except Exception as e:

@@ -3,291 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Колесо Бонусов</title>
+    <title>Открытие кейса</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
         }
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(145deg, #0a0f1a 0%, #1a1a2e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            color: white;
+            padding: 20px;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            padding: 25px 20px;
+            border-radius: 48px;
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 215, 0, 0.1);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        /* Шапка с балансом */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+        }
+        .balance-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 15px;
+            font-weight: 600;
+            color: #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .balance-box span {
+            color: #fff;
+            font-weight: 700;
+        }
+        /* Сцена с кейсом */
+        .case-scene {
+            position: relative;
+            margin: 15px 0 30px 0;
+            perspective: 800px;
+        }
+        .case-box {
+            background: linear-gradient(145deg, #2a2a3e, #161622);
+            border-radius: 24px;
+            padding: 35px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 260px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-            padding: 15px;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-            width: 100%;
-            max-width: 500px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .case-box.opening {
+            animation: pulse 0.15s ease 4;
+            border-color: #ffd700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2), inset 0 0 40px rgba(255, 215, 0, 0.05);
         }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 {
-            font-size: 26px;
-            background: linear-gradient(90deg, #f5c842, #ff6b6b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
-        .balance-container {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 12px 20px;
-            border-radius: 20px;
-            display: inline-flex;
+        .case-image {
+            width: 110px;
+            height: 140px;
+            background: linear-gradient(145deg, #3d3d5c, #1e1e32);
+            border-radius: 16px;
+            display: flex;
             align-items: center;
-            gap: 10px;
-            margin: 10px 0;
-            border: 1px solid rgba(245, 200, 66, 0.2);
+            justify-content: center;
+            font-size: 72px;
+            font-weight: 900;
+            color: #ffd700;
+            border: 2px solid #ffd700;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
         }
-        .balance-amount { font-size: 22px; font-weight: bold; color: #f5c842; }
-        #spinCanvas {
-            display: block;
-            width: 100%;
-            max-width: 400px;
-            height: auto;
-            aspect-ratio: 1/1;
-            margin: 0 auto 20px;
-            border-radius: 50%;
-            box-shadow: 0 0 30px rgba(245, 200, 66, 0.1);
-            background: #2d3a5e;
-            cursor: pointer;
-            touch-action: manipulation;
+        .case-image .lock-icon {
+            font-size: 32px;
+            opacity: 0.6;
         }
-        .status-box {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border-radius: 15px;
-            margin: 15px 0;
-            font-size: 16px;
-            text-align: center;
+        .case-image .prize-label {
+            font-size: 28px;
+            font-weight: 800;
             color: #fff;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        .case-name {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #b0b0c8;
+            text-transform: uppercase;
+        }
+        .case-name span {
+            color: #ffd700;
+        }
+        /* Результат открытия */
+        .result-box {
+            margin: 10px 0 20px 0;
             min-height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
         }
-        .status-box .emoji { font-size: 24px; margin-right: 10px; }
-        .status-box .retry-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            padding: 5px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
+        .prize-win {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: winGlow 0.8s ease 3;
         }
-        #spinBtn {
-            background: linear-gradient(145deg, #f5c842, #d4a021);
+        @keyframes winGlow {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+        .prize-common {
+            font-size: 24px;
+            font-weight: 600;
+            color: #b0b0c8;
+        }
+        /* Кнопка открытия */
+        .open-btn {
+            background: linear-gradient(145deg, #f5af19, #f12711);
             border: none;
-            color: #1a1a2e;
-            font-weight: bold;
+            color: #fff;
+            font-weight: 800;
             font-size: 20px;
-            padding: 16px 32px;
-            border-radius: 50px;
+            letter-spacing: 2px;
+            padding: 18px 28px;
+            border-radius: 100px;
             width: 100%;
             max-width: 280px;
-            box-shadow: 0 5px 25px rgba(245, 200, 66, 0.3);
+            box-shadow: 0 8px 30px rgba(241, 39, 17, 0.3);
             cursor: pointer;
-            transition: opacity 0.3s;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
         }
-        #spinBtn:disabled {
-            background: #444;
+        .open-btn:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        .open-btn:disabled {
+            background: #3a3a4e;
             color: #888;
             box-shadow: none;
             cursor: not-allowed;
             opacity: 0.6;
         }
-        .timer {
-            font-size: 18px;
+        .open-btn .shine {
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 40%;
+            height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(25deg);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine {
+            0% { left: -60%; }
+            100% { left: 120%; }
+        }
+        .timer-box {
+            font-size: 16px;
             color: #ff6b6b;
-            font-weight: bold;
-            margin-top: 15px;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-        }
-        .footer {
+            font-weight: 600;
             margin-top: 20px;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 12px;
+            letter-spacing: 1px;
         }
-        .debug-info {
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 10px;
+        .footer-text {
+            margin-top: 25px;
             font-size: 12px;
-            color: #aaa;
-            max-height: 150px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            display: block;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 1px;
+        }
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .container { padding: 20px 16px; }
+            .case-image { width: 90px; height: 120px; font-size: 56px; }
+            .case-image .prize-label { font-size: 22px; }
+            .result-box .prize-win { font-size: 24px; }
+            .result-box .prize-common { font-size: 20px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>🎡 Колесо Бонусов</h1></div>
-        <div class="balance-container">
-            <span>💰</span>
-            <span class="balance-amount" id="balanceDisplay">0</span>
+        <div class="header">
+            <div class="title">🎁 Cyber Case</div>
+            <div class="balance-box">💰 <span id="balanceDisplay">0</span></div>
         </div>
-        <canvas id="spinCanvas" width="600" height="600"></canvas>
-        <div class="status-box" id="statusMessage">
-            <span class="emoji">⏳</span>
-            <span>Загрузка...</span>
+
+        <div class="case-scene">
+            <div class="case-box" id="caseBox">
+                <div class="case-image" id="caseImage">
+                    <span class="lock-icon" id="caseIcon">🔒</span>
+                </div>
+                <div class="case-name" id="caseName">НАЖМИ <span>ОТКРЫТЬ</span></div>
+            </div>
         </div>
-        <div style="text-align: center;">
-            <button id="spinBtn" disabled>🎰 Крутить!</button>
+
+        <div class="result-box" id="resultBox">
+            <span id="resultText" style="color:#666; font-size:16px; font-weight:500;">Готов к открытию</span>
         </div>
-        <div id="timerDisplay" class="timer"></div>
-        <div class="footer">Вращение доступно раз в 24 часа</div>
-        <div id="debugInfo" class="debug-info"></div>
+
+        <button class="open-btn" id="openBtn" disabled>
+            <span class="shine"></span>
+            <span id="btnText">⏳ ЗАГРУЗКА...</span>
+        </button>
+        <div id="timerDisplay" class="timer-box"></div>
+        <div class="footer-text">открытие кейсов cs2 style</div>
     </div>
 
     <script>
         // ============================================================
-        // 1. ИНИЦИАЛИЗАЦИЯ
+        // 1. ИНИЦИАЛИЗАЦИЯ TELEGRAM WEB APP
         // ============================================================
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-        
-        console.log('🚀 Telegram WebApp загружен');
+
+        console.log('🎁 Cyber Case загружен');
         console.log('👤 User ID:', tg.initDataUnsafe?.user?.id || 'неизвестно');
 
         // ============================================================
-        // 2. НАСТРОЙКИ КОЛЕСА
+        // 2. НАСТРОЙКИ ПРИЗОВ (как слоты в кейсе)
         // ============================================================
-        const segments = [
-            { label: '100', value: 100, color: '#f94144' },
-            { label: '50', value: 50, color: '#f3722c' },
-            { label: '20', value: 20, color: '#f8961e' },
-            { label: '10', value: 10, color: '#f9c74f' },
-            { label: '5', value: 5, color: '#90be6d' },
-            { label: '200', value: 200, color: '#43aa8b' },
-            { label: '0', value: 0, color: '#577590' },
-            { label: '⭐', value: 50, color: '#9b5de5' }
+        const prizes = [
+            { label: '★ 1000', value: 1000, color: '#f94144', rarity: 'legendary' },
+            { label: '★ 500', value: 500, color: '#f3722c', rarity: 'legendary' },
+            { label: '★ 200', value: 200, color: '#f8961e', rarity: 'epic' },
+            { label: '★ 100', value: 100, color: '#f9c74f', rarity: 'epic' },
+            { label: '50', value: 50, color: '#90be6d', rarity: 'rare' },
+            { label: '20', value: 20, color: '#577590', rarity: 'common' },
+            { label: '10', value: 10, color: '#9b5de5', rarity: 'common' },
+            { label: '5', value: 5, color: '#6c757d', rarity: 'common' }
         ];
 
         // ============================================================
         // 3. DOM ЭЛЕМЕНТЫ
         // ============================================================
-        const canvas = document.getElementById('spinCanvas');
-        const ctx = canvas.getContext('2d');
-        const spinBtn = document.getElementById('spinBtn');
-        const statusMsg = document.getElementById('statusMessage');
-        const timerDisplay = document.getElementById('timerDisplay');
+        const openBtn = document.getElementById('openBtn');
+        const btnText = document.getElementById('btnText');
+        const caseBox = document.getElementById('caseBox');
+        const caseImage = document.getElementById('caseImage');
+        const caseIcon = document.getElementById('caseIcon');
+        const caseName = document.getElementById('caseName');
+        const resultText = document.getElementById('resultText');
         const balanceDisplay = document.getElementById('balanceDisplay');
-        const debugInfo = document.getElementById('debugInfo');
+        const timerDisplay = document.getElementById('timerDisplay');
 
-        const segmentAngle = (2 * Math.PI) / segments.length;
-        let currentRotation = 0;
-        let isSpinning = false;
-        let canSpin = false;
+        let canOpen = false;
+        let isOpening = false;
         let timerInterval = null;
 
         // ============================================================
-        // 4. ОТЛАДКА
+        // 4. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
         // ============================================================
-        function addDebug(msg) {
-            const time = new Date().toLocaleTimeString();
-            console.log(`🐛 ${time}: ${msg}`);
-            debugInfo.innerHTML += `<div>${time}: ${msg}</div>`;
-            debugInfo.scrollTop = debugInfo.scrollHeight;
-        }
-
-        // ============================================================
-        // 5. РИСОВАНИЕ КОЛЕСА
-        // ============================================================
-        function drawWheel(rotation) {
-            const width = canvas.width, height = canvas.height;
-            const centerX = width/2, centerY = height/2;
-            const radius = Math.min(width, height)/2 * 0.88;
-            ctx.clearRect(0, 0, width, height);
-            ctx.shadowColor = 'rgba(0,0,0,0.3)';
-            ctx.shadowBlur = 30;
-            
-            for (let i = 0; i < segments.length; i++) {
-                const startAngle = rotation + i * segmentAngle;
-                const endAngle = startAngle + segmentAngle;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                ctx.closePath();
-                ctx.fillStyle = segments[i].color;
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(startAngle + segmentAngle/2);
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 24px Arial';
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 10;
-                ctx.fillText(segments[i].label, radius * 0.65, 0);
-                ctx.restore();
-            }
-            
-            ctx.shadowBlur = 0;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 25, 0, 2*Math.PI);
-            ctx.fillStyle = '#ffd700';
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            ctx.shadowColor = 'rgba(255,215,0,0.5)';
-            ctx.shadowBlur = 20;
-            ctx.beginPath();
-            ctx.moveTo(centerX-15, 15);
-            ctx.lineTo(centerX+15, 15);
-            ctx.lineTo(centerX, 45);
-            ctx.closePath();
-            ctx.fillStyle = '#ffd700';
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-
-        function getPrize(rotation) {
-            const pointerAngle = -Math.PI/2;
-            let rawAngle = (pointerAngle - rotation) % (2*Math.PI);
-            if (rawAngle < 0) rawAngle += 2*Math.PI;
-            const index = Math.floor(rawAngle / segmentAngle) % segments.length;
-            return {
-                index: index,
-                label: segments[index].label,
-                value: segments[index].value
-            };
-        }
-
-        // ============================================================
-        // 6. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
-        // ============================================================
-        function updateStatus(emoji, text, isError = false) {
-            const emojiSpan = `<span class="emoji">${emoji}</span>`;
-            const textSpan = `<span style="${isError ? 'color:#ff6b6b;' : ''}">${text}</span>`;
-            const retryBtn = isError ? `<button class="retry-btn" onclick="checkStatus()">🔄 Повторить</button>` : '';
-            statusMsg.innerHTML = emojiSpan + textSpan + retryBtn;
+        function updateBalance(balance) {
+            balanceDisplay.textContent = balance;
         }
 
         function updateTimer(seconds) {
@@ -301,183 +320,191 @@
             timerDisplay.textContent = `⏳ ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
         }
 
-        function updateBalance(balance) {
-            balanceDisplay.textContent = balance;
+        function setStatus(text, isError = false, isSuccess = false) {
+            resultText.textContent = text;
+            resultText.style.color = isError ? '#ff6b6b' : isSuccess ? '#69db7c' : '#b0b0c8';
+        }
+
+        function setCaseState(state) {
+            // state: 'locked', 'opening', 'result'
+            if (state === 'locked') {
+                caseBox.classList.remove('opening');
+                caseIcon.textContent = '🔒';
+                caseName.innerHTML = 'НАЖМИ <span>ОТКРЫТЬ</span>';
+            } else if (state === 'opening') {
+                caseBox.classList.add('opening');
+                caseIcon.textContent = '🌀';
+                caseName.innerHTML = 'ОТКРЫТИЕ <span>...</span>';
+            } else if (state === 'result') {
+                caseBox.classList.remove('opening');
+                // иконка и имя обновятся из результата
+            }
         }
 
         // ============================================================
-        // 7. СВЯЗЬ С СЕРВЕРОМ (HTTP API, а не tg.sendData!)
+        // 5. ОТПРАВКА ДАННЫХ БОТУ
         // ============================================================
-        // tg.sendData() закрывает Mini App сразу после вызова — ответ
-        // внутри приложения получить невозможно. Поэтому используем
-        // обычные fetch()-запросы к API бота.
-        const API_BASE = 'https://cyberxgift.ru';
-
-        async function apiFetch(path, options = {}) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
+        function sendToBot(data) {
             try {
-                const resp = await fetch(API_BASE + path, { ...options, signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (!resp.ok) {
-                    throw new Error(`HTTP ${resp.status}`);
-                }
-                return await resp.json();
+                tg.sendData(data);
+                console.log('📤 Отправлено:', data);
+                return true;
             } catch (e) {
-                clearTimeout(timeoutId);
-                throw e;
+                console.error('❌ Ошибка отправки:', e);
+                return false;
             }
         }
 
         // ============================================================
-        // 8. ПРОВЕРКА СТАТУСА
+        // 6. ОСНОВНАЯ ЛОГИКА: ПРОВЕРКА СТАТУСА
         // ============================================================
-        async function checkStatus() {
-            addDebug('🔍 Проверка статуса...');
-            updateStatus('⏳', 'Проверка...');
-            spinBtn.disabled = true;
-
-            try {
-                const data = await apiFetch(`/api/status?init_data=${encodeURIComponent(tg.initData)}`);
-                addDebug(`📨 Ответ: status=${data.status}`);
-                handleServerResponse(data);
-            } catch (e) {
-                addDebug(`⏰ Ошибка запроса: ${e.message}`);
-                updateStatus('⚠️', 'Нет ответа от сервера', true);
-                spinBtn.disabled = true;
-            }
+        function checkStatus() {
+            setStatus('⏳ Проверка...');
+            openBtn.disabled = true;
+            btnText.textContent = '⏳ ЗАГРУЗКА...';
+            sendToBot('get_status');
         }
 
         // ============================================================
-        // 9. ВРАЩЕНИЕ КОЛЕСА
+        // 7. ОСНОВНАЯ ЛОГИКА: ОТКРЫТИЕ КЕЙСА (анимация)
         // ============================================================
-        function spinWheel() {
-            if (isSpinning || !canSpin) {
-                addDebug('⚠️ Вращение заблокировано');
-                return;
-            }
-            isSpinning = true;
-            spinBtn.disabled = true;
-            updateStatus('🌀', 'Колесо вращается...');
-            
-            const extraSpins = 5 + Math.random() * 3;
-            const targetAngle = extraSpins * 2 * Math.PI + Math.random() * 2 * Math.PI;
-            const startRotation = currentRotation;
-            const endRotation = startRotation + targetAngle;
-            const duration = 4000;
-            const startTime = performance.now();
-            
-            function animate(time) {
-                const elapsed = time - startTime;
-                const progress = Math.min(elapsed/duration, 1);
-                const ease = 1 - Math.pow(1-progress, 3);
-                currentRotation = startRotation + targetAngle * ease;
-                drawWheel(currentRotation);
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    currentRotation = endRotation;
-                    drawWheel(endRotation);
-                    const prize = getPrize(endRotation);
-                    updateStatus('🎁', `Выпало: ${prize.label} ${prize.value > 0 ? 'монет' : ''}`);
-                    isSpinning = false;
-                    sendSpinResult(prize);
-                }
-            }
-            requestAnimationFrame(animate);
-        }
+        function openCase() {
+            if (isOpening || !canOpen) return;
+            isOpening = true;
+            canOpen = false;
+            openBtn.disabled = true;
+            btnText.textContent = '🌀 ОТКРЫТИЕ...';
 
-        // ============================================================
-        // 10. ОТПРАВКА РЕЗУЛЬТАТА СПИНА И ОБРАБОТКА ОТВЕТОВ СЕРВЕРА
-        // ============================================================
-        async function sendSpinResult(prize) {
-            addDebug(`📤 Отправка результата: ${prize.label} (${prize.value})`);
-            try {
-                const data = await apiFetch('/api/spin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        init_data: tg.initData,
-                        prize_id: prize.index,
+            setCaseState('opening');
+            setStatus('🎲 Выпадает приз...');
+
+            // Выбираем случайный приз
+            const prize = prizes[Math.floor(Math.random() * prizes.length)];
+
+            // Анимация "прокрутки" символов
+            let count = 0;
+            const maxCount = 20;
+            const interval = setInterval(() => {
+                const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
+                caseIcon.textContent = randomPrize.label;
+                caseImage.style.transform = `scale(${1 + Math.random() * 0.2})`;
+                caseImage.style.borderColor = randomPrize.color;
+
+                count++;
+                if (count >= maxCount) {
+                    clearInterval(interval);
+                    // Финальный результат
+                    caseIcon.textContent = prize.label;
+                    caseImage.style.transform = 'scale(1)';
+                    caseImage.style.borderColor = prize.color;
+                    caseName.innerHTML = `ВЫИГРАНО <span>${prize.label}</span>`;
+                    setStatus(`🎉 Выиграно ${prize.label} монет!`, false, true);
+
+                    // Отправляем результат боту
+                    const data = 'spin_result:' + JSON.stringify({
+                        prize_id: prizes.indexOf(prize),
                         prize_name: prize.label,
                         value: prize.value
-                    })
-                });
-                addDebug(`📨 Ответ: status=${data.status}`);
-                handleServerResponse(data);
-            } catch (e) {
-                addDebug(`❌ Ошибка отправки: ${e.message}`);
-                updateStatus('⚠️', 'Нет ответа от сервера', true);
-            }
-        }
-
-        function handleServerResponse(data) {
-            if (data.status === 'can_spin') {
-                canSpin = true;
-                spinBtn.disabled = false;
-                updateStatus('🎯', 'Нажми на кнопку или коснись колеса!');
-                timerDisplay.textContent = '';
-                if (data.balance !== undefined) updateBalance(data.balance);
-                addDebug('🎯 Можно крутить!');
-
-            } else if (data.status === 'wait') {
-                canSpin = false;
-                spinBtn.disabled = true;
-                updateStatus('⏳', 'Кулдаун активен!');
-                updateTimer(data.wait_time);
-                if (data.balance !== undefined) updateBalance(data.balance);
-                addDebug(`⏳ Ожидание ${data.wait_time} секунд`);
-
-                if (timerInterval) clearInterval(timerInterval);
-                let remaining = data.wait_time;
-                timerInterval = setInterval(() => {
-                    remaining--;
-                    updateTimer(remaining);
-                    if (remaining <= 0) {
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                        checkStatus();
-                    }
-                }, 1000);
-
-            } else if (data.status === 'success') {
-                updateStatus('🎉', `Выиграно ${data.prize} монет!`);
-                if (data.new_balance !== undefined) updateBalance(data.new_balance);
-                addDebug(`🎉 Выиграно ${data.value} монет!`);
-                try {
-                    tg.showPopup({
-                        title: '🎉 Поздравляем!',
-                        message: `Вы выиграли ${data.value} монет!`,
-                        buttons: [{ type: 'ok' }]
                     });
-                } catch (e) {}
-                setTimeout(checkStatus, 3000);
+                    sendToBot(data);
 
-            } else if (data.error) {
-                updateStatus('❌', data.error, true);
-                addDebug(`❌ Ошибка: ${data.error}`);
-            }
+                    isOpening = false;
+                    openBtn.disabled = true;
+                    btnText.textContent = '⏳ ОЖИДАНИЕ...';
+                    setCaseState('result');
+
+                    // Через 3 секунды проверяем статус снова
+                    setTimeout(() => {
+                        checkStatus();
+                    }, 3000);
+                }
+            }, 150);
         }
 
         // ============================================================
-        // 11. ОБРАБОТЧИКИ СОБЫТИЙ
+        // 8. ОБРАБОТКА ОТВЕТОВ ОТ БОТА
         // ============================================================
-        spinBtn.addEventListener('click', spinWheel);
-        canvas.addEventListener('click', () => {
-            if (canSpin && !isSpinning) spinWheel();
+        tg.onEvent('message', (event) => {
+            console.log('📨 Ответ от бота:', event.data);
+
+            try {
+                const data = JSON.parse(event.data);
+                console.log('📊 Парсинг:', data);
+
+                if (data.status === 'can_spin') {
+                    canOpen = true;
+                    openBtn.disabled = false;
+                    btnText.textContent = '🔓 ОТКРЫТЬ КЕЙС';
+                    setStatus('🎯 Нажми "Открыть кейс"');
+                    timerDisplay.textContent = '';
+                    if (data.balance !== undefined) updateBalance(data.balance);
+                    setCaseState('locked');
+
+                } else if (data.status === 'wait') {
+                    canOpen = false;
+                    openBtn.disabled = true;
+                    btnText.textContent = '⏳ ОЖИДАНИЕ';
+                    setStatus(`⏳ Кулдаун: ${data.wait_time} сек`);
+                    updateTimer(data.wait_time);
+                    if (data.balance !== undefined) updateBalance(data.balance);
+                    setCaseState('locked');
+
+                    if (timerInterval) clearInterval(timerInterval);
+                    let remaining = data.wait_time;
+                    timerInterval = setInterval(() => {
+                        remaining--;
+                        updateTimer(remaining);
+                        if (remaining <= 0) {
+                            clearInterval(timerInterval);
+                            timerInterval = null;
+                            checkStatus();
+                        }
+                    }, 1000);
+
+                } else if (data.status === 'success') {
+                    setStatus(`🎉 Выиграно ${data.prize} монет!`, false, true);
+                    if (data.new_balance !== undefined) updateBalance(data.new_balance);
+                    setCaseState('result');
+                    // показываем выигрыш в кейсе
+                    caseIcon.textContent = data.prize;
+                    caseName.innerHTML = `ВЫИГРАНО <span>${data.prize}</span>`;
+                    try {
+                        tg.showPopup({
+                            title: '🎉 Открытие кейса!',
+                            message: `Вы выиграли ${data.value} монет!`,
+                            buttons: [{ type: 'ok' }]
+                        });
+                    } catch(e) {}
+
+                } else if (data.error) {
+                    setStatus(`❌ ${data.error}`, true);
+                    openBtn.disabled = true;
+                    btnText.textContent = '⚠️ ОШИБКА';
+                }
+
+            } catch (e) {
+                console.error('❌ Ошибка парсинга:', e);
+                setStatus('📨 Ошибка ответа', true);
+            }
         });
 
         // ============================================================
-        // 12. ЗАПУСК
+        // 9. ОБРАБОТЧИКИ СОБЫТИЙ
         // ============================================================
-        drawWheel(0);
-        addDebug('🎡 Приложение загружено');
-        
-        // Запрос статуса через 1 секунду
-        setTimeout(checkStatus, 1000);
+        openBtn.addEventListener('click', openCase);
 
-        console.log('✅ Мини-приложение готово!');
+        // ============================================================
+        // 10. ЗАПУСК
+        // ============================================================
+        setCaseState('locked');
+        setStatus('⏳ Загрузка...');
+        openBtn.disabled = true;
+        btnText.textContent = '⏳ ЗАГРУЗКА...';
+
+        // Запрос статуса через 0.5 секунды
+        setTimeout(checkStatus, 500);
+
+        console.log('✅ Cyber Case готов!');
     </script>
 </body>
 </html>

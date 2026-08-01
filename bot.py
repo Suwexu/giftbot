@@ -11,32 +11,24 @@ from aiohttp.web import middleware
 import aiosqlite
 from dotenv import load_dotenv
 
-# Загрузка переменных окружения
 load_dotenv()
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Конфигурация
 API_TOKEN = os.getenv('BOT_TOKEN')
 PORT = int(os.getenv('PORT', 443))
 WEBAPP_URL = "https://cyberxgift.ru/static/"
+WEBHOOK_URL = "https://cyberxgift.ru/webhook"
 
 if not API_TOKEN:
-    raise ValueError("BOT_TOKEN не найден в переменных окружения!")
+    raise ValueError("BOT_TOKEN не найден!")
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ========== MIDDLEWARE ДЛЯ CORS ==========
-
 @middleware
 async def cors_middleware(request, handler):
-    """Добавление CORS заголовков для работы мини-приложения"""
     response = await handler(request)
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
@@ -46,242 +38,132 @@ async def cors_middleware(request, handler):
 # ========== БАЗА ДАННЫХ ==========
 
 async def init_db():
-    try:
-        async with aiosqlite.connect('users.db') as db:
-            await db.execute('''CREATE TABLE IF NOT EXISTS users 
-                                (user_id INTEGER PRIMARY KEY, 
-                                 last_spin_time INTEGER DEFAULT 0, 
-                                 total_balance INTEGER DEFAULT 0,
-                                 spins_count INTEGER DEFAULT 0,
-                                 username TEXT DEFAULT '')''')
-            await db.commit()
-            logger.info("✅ База данных готова")
-    except Exception as e:
-        logger.error(f"❌ Ошибка инициализации БД: {e}")
+    async with aiosqlite.connect('users.db') as db:
+        await db.execute('''CREATE TABLE IF NOT EXISTS users 
+                            (user_id INTEGER PRIMARY KEY, 
+                             last_spin_time INTEGER DEFAULT 0, 
+                             total_balance INTEGER DEFAULT 0,
+                             username TEXT DEFAULT '')''')
+        await db.commit()
+    logger.info("✅ База данных готова")
 
-async def get_user_balance(user_id: int) -> int:
-    try:
-        async with aiosqlite.connect('users.db') as db:
-            cursor = await db.execute(
-                'SELECT total_balance FROM users WHERE user_id = ?',
-                (user_id,)
-            )
-            result = await cursor.fetchone()
-            return result[0] if result else 0
-    except Exception as e:
-        logger.error(f"Ошибка получения баланса: {e}")
-        return 0
+async def get_balance(user_id):
+    async with aiosqlite.connect('users.db') as db:
+        cursor = await db.execute('SELECT total_balance FROM users WHERE user_id = ?', (user_id,))
+        result = await cursor.fetchone()
+        return result[0] if result else 0
 
-async def get_last_spin_time(user_id: int) -> int:
-    try:
-        async with aiosqlite.connect('users.db') as db:
-            cursor = await db.execute(
-                'SELECT last_spin_time FROM users WHERE user_id = ?',
-                (user_id,)
-            )
-            result = await cursor.fetchone()
-            return result[0] if result else 0
-    except Exception as e:
-        logger.error(f"Ошибка получения времени: {e}")
-        return 0
+async def get_last_spin(user_id):
+    async with aiosqlite.connect('users.db') as db:
+        cursor = await db.execute('SELECT last_spin_time FROM users WHERE user_id = ?', (user_id,))
+        result = await cursor.fetchone()
+        return result[0] if result else 0
 
-# ========== ХЭНДЛЕРЫ КОМАНД ==========
+# ========== КОМАНДЫ ==========
 
 @dp.message(Command("start"))
-async def start_command(message: types.Message):
+async def start(message: types.Message):
     user_id = message.from_user.id
     username = message.from_user.username or "без username"
-    first_name = message.from_user.first_name or "Пользователь"
     
-    try:
-        async with aiosqlite.connect('users.db') as db:
-            await db.execute(
-                'INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)',
-                (user_id, username)
-            )
-            await db.commit()
-    except Exception as e:
-        logger.error(f"Ошибка регистрации пользователя: {e}")
+    async with aiosqlite.connect('users.db') as db:
+        await db.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', (user_id, username))
+        await db.commit()
     
-    logger.info(f"👤 Пользователь {user_id} (@{username}) запустил бота")
-    
-    web_app_button = InlineKeyboardButton(
-        text="🎡 Крутить колесо",
-        web_app=WebAppInfo(url=WEBAPP_URL + 'index.html')
-    )
-    
-    balance_button = InlineKeyboardButton(
-        text="💰 Баланс",
-        callback_data="check_balance"
-    )
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[web_app_button], [balance_button]]
-    )
-    
-    await message.answer(
-        f"🎰 Привет, {first_name}!\n\n"
-        "Нажми на кнопку ниже, чтобы открыть колесо бонусов.\n"
-        "⚡️ Крутить можно раз в 24 часа!\n\n"
-        "🎁 Удачи!",
-        reply_markup=keyboard
-    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton("🎡 Крутить колесо", web_app=WebAppInfo(url=WEBAPP_URL + 'index.html'))],
+        [InlineKeyboardButton("💰 Баланс", callback_data="balance")]
+    ])
+    await message.answer("🎰 Привет! Крути колесо раз в 24 часа!", reply_markup=keyboard)
 
-@dp.callback_query(lambda c: c.data == "check_balance")
-async def check_balance(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    balance = await get_user_balance(user_id)
-    await callback.answer(f"💰 Твой баланс: {balance} монет", show_alert=True)
+@dp.callback_query(lambda c: c.data == "balance")
+async def balance(callback: types.CallbackQuery):
+    balance = await get_balance(callback.from_user.id)
+    await callback.answer(f"💰 Баланс: {balance} монет", show_alert=True)
 
-# ========== ОБРАБОТЧИК MINI APP ==========
+# ========== ОБРАБОТЧИК МИНИ-ПРИЛОЖЕНИЯ ==========
 
 @dp.message(lambda message: message.web_app_data is not None)
-async def handle_web_app_data(message: types.Message):
+async def web_app_data(message: types.Message):
     user_id = message.from_user.id
     data = message.web_app_data.data
-    
-    logger.info(f"📩 ПОЛУЧЕН ЗАПРОС от {user_id}: {data[:100]}...")
+    logger.info(f"📩 ПОЛУЧЕН ЗАПРОС от {user_id}: {data[:50]}...")
     
     if data == 'get_status':
-        await get_status_handler(message)
+        last = await get_last_spin(user_id)
+        now = int(time.time())
+        balance = await get_balance(user_id)
+        if now - last >= 86400:
+            await message.answer(json.dumps({'status': 'can_spin', 'balance': balance}))
+        else:
+            await message.answer(json.dumps({'status': 'wait', 'wait_time': 86400 - (now - last), 'balance': balance}))
+    
     elif data.startswith('spin_result:'):
-        await spin_result_handler(message)
-    else:
-        await message.answer(json.dumps({'error': 'Неизвестный запрос'}))
+        try:
+            result = json.loads(data.replace('spin_result:', ''))
+            prize = result.get('value', 0)
+            async with aiosqlite.connect('users.db') as db:
+                await db.execute('UPDATE users SET last_spin_time = ?, total_balance = total_balance + ? WHERE user_id = ?', 
+                                (int(time.time()), prize, user_id))
+                await db.commit()
+            new_balance = await get_balance(user_id)
+            await message.answer(json.dumps({'status': 'success', 'prize': result.get('label'), 'value': prize, 'new_balance': new_balance}))
+        except Exception as e:
+            logger.error(f"Ошибка: {e}")
+            await message.answer(json.dumps({'status': 'error', 'message': 'Ошибка обработки'}))
 
-async def get_status_handler(message: types.Message):
-    user_id = message.from_user.id
-    last_spin = await get_last_spin_time(user_id)
-    now = int(time.time())
-    time_diff = now - last_spin
-    balance = await get_user_balance(user_id)
-    
-    if time_diff >= 86400:
-        response = {'status': 'can_spin', 'wait_time': 0, 'balance': balance}
-        logger.info(f"✅ Пользователь {user_id} МОЖЕТ крутить")
-    else:
-        wait_seconds = 86400 - time_diff
-        response = {'status': 'wait', 'wait_time': wait_seconds, 'balance': balance}
-        logger.info(f"⏳ Пользователь {user_id} должен ждать {wait_seconds} сек")
-    
-    await message.answer(json.dumps(response))
-    logger.info(f"📤 ОТВЕТ ОТПРАВЛЕН для {user_id}")
+# ========== WEBHOOK ==========
 
-async def spin_result_handler(message: types.Message):
-    user_id = message.from_user.id
-    data_str = message.web_app_data.data.replace('spin_result:', '')
-    
+async def webhook_check(request):
+    """Проверка для Telegram"""
+    return web.Response(text="OK", status=200)
+
+async def handle_webhook(request):
     try:
-        result_data = json.loads(data_str)
-        prize_name = result_data.get('prize_name', '0')
-        prize_value = result_data.get('value', 0)
-        logger.info(f"🎯 Пользователь {user_id} выиграл: {prize_name} ({prize_value} монет)")
+        data = await request.json()
+        update = types.Update(**data)
+        await dp.feed_update(bot, update)
+        return web.Response(status=200)
     except Exception as e:
-        logger.error(f"❌ Ошибка парсинга: {e}")
-        await message.answer(json.dumps({'error': 'Ошибка данных'}))
-        return
-    
-    last_spin = await get_last_spin_time(user_id)
-    now = int(time.time())
-    
-    if now - last_spin < 86400:
-        await message.answer(json.dumps({'error': 'Подождите 24 часа!'}))
-        return
-    
-    try:
-        async with aiosqlite.connect('users.db') as db:
-            await db.execute(
-                'UPDATE users SET last_spin_time = ?, spins_count = spins_count + 1 WHERE user_id = ?',
-                (now, user_id)
-            )
-            if prize_value > 0:
-                await db.execute(
-                    'UPDATE users SET total_balance = total_balance + ? WHERE user_id = ?',
-                    (prize_value, user_id)
-                )
-            await db.commit()
-    except Exception as e:
-        logger.error(f"❌ Ошибка БД: {e}")
-        await message.answer(json.dumps({'error': 'Ошибка БД'}))
-        return
-    
-    new_balance = await get_user_balance(user_id)
-    
-    response = {
-        'status': 'success',
-        'prize': prize_name,
-        'value': prize_value,
-        'new_balance': new_balance
-    }
-    await message.answer(json.dumps(response))
-    logger.info(f"🎉 Успешное вращение для {user_id}: +{prize_value} монет")
-    
-    if prize_value > 0:
-        await message.answer(
-            f"🎉 Поздравляю, {message.from_user.first_name}!\n\n"
-            f"Ты выиграл **{prize_name}** монет!\n"
-            f"💰 Твой баланс: {new_balance} монет\n\n"
-            f"🔄 Следующее вращение будет доступно через 24 часа."
-        )
-    else:
-        await message.answer(
-            f"😅 Не повезло, {message.from_user.first_name}!\n"
-            f"Ты выиграл **{prize_name}**\n\n"
-            f"🔄 Попробуй снова через 24 часа!"
-        )
-
-# ========== ВЕБ-СЕРВЕР ДЛЯ СТАТИКИ И HEALTHCHECK ==========
+        logger.error(f"Webhook error: {e}")
+        return web.Response(status=500)
 
 async def healthcheck(request):
     return web.Response(text="OK", status=200)
 
-# ========== ЗАПУСК В POLLING-РЕЖИМЕ ==========
+# ========== ЗАПУСК ==========
 
-async def start_http_server():
-    """Запуск HTTP сервера для статики и healthcheck"""
+async def main():
+    await init_db()
+    
     app = web.Application(middlewares=[cors_middleware])
     app.router.add_get('/health', healthcheck)
-    app.router.add_static('/static/', path='static/', name='static', show_index=True)
+    app.router.add_get('/webhook', webhook_check)  # для проверки Telegram
+    app.router.add_post('/webhook', handle_webhook)
+    app.router.add_static('/static/', path='static/')
     
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=PORT)
     await site.start()
-    logger.info(f"🌐 HTTP сервер запущен на порту {PORT}")
+    
+    logger.info(f"🌐 Сервер запущен на порту {PORT}")
     logger.info(f"📁 Статика: {WEBAPP_URL}")
-
-async def main():
-    """Основная функция запуска"""
-    # Инициализация БД
-    await init_db()
+    logger.info(f"🔗 Webhook: {WEBHOOK_URL}")
     
-    # Запускаем HTTP сервер в фоне для статики
-    asyncio.create_task(start_http_server())
-    
-    # Даём серверу время запуститься
-    await asyncio.sleep(1)
-    
-    # ЗАПУСКАЕМ БОТА В POLLING-РЕЖИМЕ
-    logger.info("🚀 Бот запускается в polling-режиме...")
-    
-    # Удаляем старый webhook, если был
+    # Устанавливаем вебхук
     try:
         await bot.delete_webhook()
-        logger.info("✅ Webhook удалён")
+        await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
+        logger.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
     except Exception as e:
-        logger.warning(f"⚠️ Ошибка удаления webhook: {e}")
+        logger.error(f"❌ Ошибка установки webhook: {e}")
+        logger.info("🔄 Переключаемся на polling...")
+        await bot.delete_webhook()
+        await dp.start_polling(bot)
+        return
     
-    logger.info("🔄 Запуск polling...")
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        logger.error(f"❌ Ошибка polling: {e}")
-        await asyncio.sleep(5)
-        logger.info("🔄 Повторная попытка запуска polling...")
-        await dp.start_polling(bot)
+    await asyncio.Event().wait()
 
 if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("🛑 Бот остановлен")
+    asyncio.run(main())

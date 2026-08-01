@@ -306,35 +306,46 @@
         }
 
         // ============================================================
-        // 7. ОТПРАВКА ДАННЫХ БОТУ (ПРОСТОЙ И НАДЁЖНЫЙ СПОСОБ)
+        // 7. СВЯЗЬ С СЕРВЕРОМ (HTTP API, а не tg.sendData!)
         // ============================================================
-        function sendToBot(data) {
-            addDebug(`📤 Отправка: ${data}`);
+        // tg.sendData() закрывает Mini App сразу после вызова — ответ
+        // внутри приложения получить невозможно. Поэтому используем
+        // обычные fetch()-запросы к API бота.
+        const API_BASE = 'https://cyberxgift.ru';
+
+        async function apiFetch(path, options = {}) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             try {
-                tg.sendData(data);
-                addDebug('✅ Отправлено через tg.sendData()');
-                return true;
+                const resp = await fetch(API_BASE + path, { ...options, signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                return await resp.json();
             } catch (e) {
-                addDebug(`❌ Ошибка: ${e.message}`);
-                return false;
+                clearTimeout(timeoutId);
+                throw e;
             }
         }
 
         // ============================================================
         // 8. ПРОВЕРКА СТАТУСА
         // ============================================================
-        function checkStatus() {
+        async function checkStatus() {
             addDebug('🔍 Проверка статуса...');
             updateStatus('⏳', 'Проверка...');
             spinBtn.disabled = true;
-            sendToBot('get_status');
-            
-            // Таймаут на случай, если ответа нет
-            setTimeout(() => {
-                addDebug('⏰ Таймаут: ответа нет 15 секунд');
+
+            try {
+                const data = await apiFetch(`/api/status?init_data=${encodeURIComponent(tg.initData)}`);
+                addDebug(`📨 Ответ: status=${data.status}`);
+                handleServerResponse(data);
+            } catch (e) {
+                addDebug(`⏰ Ошибка запроса: ${e.message}`);
                 updateStatus('⚠️', 'Нет ответа от сервера', true);
                 spinBtn.disabled = true;
-            }, 15000);
+            }
         }
 
         // ============================================================
@@ -369,87 +380,85 @@
                     currentRotation = endRotation;
                     drawWheel(endRotation);
                     const prize = getPrize(endRotation);
-                    const data = 'spin_result:' + JSON.stringify({
-                        prize_id: prize.index,
-                        prize_name: prize.label,
-                        value: prize.value
-                    });
-                    sendToBot(data);
                     updateStatus('🎁', `Выпало: ${prize.label} ${prize.value > 0 ? 'монет' : ''}`);
                     isSpinning = false;
-                    setTimeout(checkStatus, 3000);
+                    sendSpinResult(prize);
                 }
             }
             requestAnimationFrame(animate);
         }
 
         // ============================================================
-        // 10. ОБРАБОТКА ОТВЕТОВ ОТ БОТА (САМОЕ ВАЖНОЕ!)
+        // 10. ОТПРАВКА РЕЗУЛЬТАТА СПИНА И ОБРАБОТКА ОТВЕТОВ СЕРВЕРА
         // ============================================================
-        tg.onEvent('message', (event) => {
-            addDebug(`📨 Получен ответ: ${event.data.substring(0, 100)}...`);
-            console.log('📨 Ответ от бота:', event.data);
-            
-            // Если это служебное сообщение
-            if (event.data === '✅ Данные получены') {
-                addDebug('📨 Бот подтвердил получение');
-                return;
-            }
-            
+        async function sendSpinResult(prize) {
+            addDebug(`📤 Отправка результата: ${prize.label} (${prize.value})`);
             try {
-                const data = JSON.parse(event.data);
-                addDebug(`📊 Парсинг: status=${data.status}`);
-                
-                if (data.status === 'can_spin') {
-                    canSpin = true;
-                    spinBtn.disabled = false;
-                    updateStatus('🎯', 'Нажми на кнопку или коснись колеса!');
-                    timerDisplay.textContent = '';
-                    if (data.balance !== undefined) updateBalance(data.balance);
-                    addDebug('🎯 Можно крутить!');
-                    
-                } else if (data.status === 'wait') {
-                    canSpin = false;
-                    spinBtn.disabled = true;
-                    updateStatus('⏳', 'Кулдаун активен!');
-                    updateTimer(data.wait_time);
-                    if (data.balance !== undefined) updateBalance(data.balance);
-                    addDebug(`⏳ Ожидание ${data.wait_time} секунд`);
-                    
-                    if (timerInterval) clearInterval(timerInterval);
-                    let remaining = data.wait_time;
-                    timerInterval = setInterval(() => {
-                        remaining--;
-                        updateTimer(remaining);
-                        if (remaining <= 0) {
-                            clearInterval(timerInterval);
-                            timerInterval = null;
-                            checkStatus();
-                        }
-                    }, 1000);
-                    
-                } else if (data.status === 'success') {
-                    updateStatus('🎉', `Выиграно ${data.prize} монет!`);
-                    if (data.new_balance !== undefined) updateBalance(data.new_balance);
-                    addDebug(`🎉 Выиграно ${data.value} монет!`);
-                    try {
-                        tg.showPopup({
-                            title: '🎉 Поздравляем!',
-                            message: `Вы выиграли ${data.value} монет!`,
-                            buttons: [{ type: 'ok' }]
-                        });
-                    } catch(e) {}
-                    
-                } else if (data.error) {
-                    updateStatus('❌', data.error, true);
-                    addDebug(`❌ Ошибка: ${data.error}`);
-                }
-                
+                const data = await apiFetch('/api/spin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        init_data: tg.initData,
+                        prize_id: prize.index,
+                        prize_name: prize.label,
+                        value: prize.value
+                    })
+                });
+                addDebug(`📨 Ответ: status=${data.status}`);
+                handleServerResponse(data);
             } catch (e) {
-                addDebug(`❌ Ошибка парсинга: ${e.message}`);
-                updateStatus('📨', event.data.substring(0, 50));
+                addDebug(`❌ Ошибка отправки: ${e.message}`);
+                updateStatus('⚠️', 'Нет ответа от сервера', true);
             }
-        });
+        }
+
+        function handleServerResponse(data) {
+            if (data.status === 'can_spin') {
+                canSpin = true;
+                spinBtn.disabled = false;
+                updateStatus('🎯', 'Нажми на кнопку или коснись колеса!');
+                timerDisplay.textContent = '';
+                if (data.balance !== undefined) updateBalance(data.balance);
+                addDebug('🎯 Можно крутить!');
+
+            } else if (data.status === 'wait') {
+                canSpin = false;
+                spinBtn.disabled = true;
+                updateStatus('⏳', 'Кулдаун активен!');
+                updateTimer(data.wait_time);
+                if (data.balance !== undefined) updateBalance(data.balance);
+                addDebug(`⏳ Ожидание ${data.wait_time} секунд`);
+
+                if (timerInterval) clearInterval(timerInterval);
+                let remaining = data.wait_time;
+                timerInterval = setInterval(() => {
+                    remaining--;
+                    updateTimer(remaining);
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        checkStatus();
+                    }
+                }, 1000);
+
+            } else if (data.status === 'success') {
+                updateStatus('🎉', `Выиграно ${data.prize} монет!`);
+                if (data.new_balance !== undefined) updateBalance(data.new_balance);
+                addDebug(`🎉 Выиграно ${data.value} монет!`);
+                try {
+                    tg.showPopup({
+                        title: '🎉 Поздравляем!',
+                        message: `Вы выиграли ${data.value} монет!`,
+                        buttons: [{ type: 'ok' }]
+                    });
+                } catch (e) {}
+                setTimeout(checkStatus, 3000);
+
+            } else if (data.error) {
+                updateStatus('❌', data.error, true);
+                addDebug(`❌ Ошибка: ${data.error}`);
+            }
+        }
 
         // ============================================================
         // 11. ОБРАБОТЧИКИ СОБЫТИЙ

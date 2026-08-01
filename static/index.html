@@ -6,505 +6,462 @@
     <title>Открытие кейса</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(145deg, #0a0f1a 0%, #1a1a2e 100%);
+            background: radial-gradient(circle at 50% 0%, #1b2838 0%, #0e1621 60%, #0a0f16 100%);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
-            color: white;
-            padding: 20px;
-            margin: 0;
-            overflow: hidden;
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 16px;
+            color: #fff;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            padding: 25px 20px;
-            border-radius: 48px;
-            border: 1px solid rgba(255, 215, 0, 0.15);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 215, 0, 0.1);
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        /* Шапка с балансом */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-        .title {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            background: linear-gradient(135deg, #f5af19, #f12711);
+        .container { width: 100%; max-width: 480px; }
+        .header { text-align: center; margin-bottom: 14px; }
+        .header h1 {
+            font-size: 24px;
+            letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #de9b35, #ffcf6b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-transform: uppercase;
         }
-        .balance-box {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 8px 16px;
-            border-radius: 100px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            font-size: 15px;
-            font-weight: 600;
-            color: #ffd700;
-            display: flex;
+        .balance-container {
+            background: rgba(0,0,0,0.35);
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
+            margin-top: 8px;
+            border: 1px solid rgba(222,155,53,0.3);
         }
-        .balance-box span {
-            color: #fff;
-            font-weight: 700;
-        }
-        /* Сцена с кейсом */
-        .case-scene {
+        .balance-amount { font-size: 20px; font-weight: bold; color: #de9b35; }
+
+        /* ===== КЕЙС / РИЛ ===== */
+        .case-wrap {
             position: relative;
-            margin: 15px 0 30px 0;
-            perspective: 800px;
+            margin: 18px 0 10px;
         }
-        .case-box {
-            background: linear-gradient(145deg, #2a2a3e, #161622);
-            border-radius: 24px;
-            padding: 35px 20px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+        .pointer {
+            position: absolute;
+            left: 50%;
+            top: -6px;
+            transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 14px solid #de9b35;
+            z-index: 5;
+            filter: drop-shadow(0 0 6px rgba(222,155,53,0.8));
+        }
+        .center-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, #de9b35, rgba(222,155,53,0));
+            transform: translateX(-50%);
+            z-index: 4;
+        }
+        .reel-viewport {
+            overflow: hidden;
+            height: 130px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #16202c, #0d151d);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
             position: relative;
-            transition: all 0.3s ease;
-            min-height: 260px;
+        }
+        .reel-viewport::before, .reel-viewport::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 40px;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .reel-viewport::before {
+            left: 0;
+            background: linear-gradient(90deg, #0d151d, rgba(13,21,29,0));
+        }
+        .reel-viewport::after {
+            right: 0;
+            background: linear-gradient(270deg, #0d151d, rgba(13,21,29,0));
+        }
+        .reel {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            will-change: transform;
+        }
+        .case-item {
+            flex: 0 0 112px;
+            height: 110px;
+            margin: 0 8px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-        }
-        .case-box.opening {
-            animation: pulse 0.15s ease 4;
-            border-color: #ffd700;
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2), inset 0 0 40px rgba(255, 215, 0, 0.05);
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-        .case-image {
-            width: 110px;
-            height: 140px;
-            background: linear-gradient(145deg, #3d3d5c, #1e1e32);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 72px;
-            font-weight: 900;
-            color: #ffd700;
-            border: 2px solid #ffd700;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            margin-bottom: 20px;
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+            padding: 8px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.2));
+            border: 1px solid rgba(255,255,255,0.08);
             position: relative;
+            overflow: hidden;
         }
-        .case-image .lock-icon {
-            font-size: 32px;
-            opacity: 0.6;
+        .case-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--c, #de9b35);
         }
-        .case-image .prize-label {
-            font-size: 28px;
-            font-weight: 800;
-            color: #fff;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        .case-item .icon { font-size: 26px; margin-bottom: 6px; }
+        .case-item .label { font-size: 12px; font-weight: 600; line-height: 1.25; }
+        .case-item.winner {
+            box-shadow: 0 0 18px var(--c, #de9b35);
+            border-color: var(--c, #de9b35);
         }
-        .case-name {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            color: #b0b0c8;
-            text-transform: uppercase;
-        }
-        .case-name span {
-            color: #ffd700;
-        }
-        /* Результат открытия */
-        .result-box {
-            margin: 10px 0 20px 0;
-            min-height: 60px;
+
+        .status-box {
+            background: rgba(0,0,0,0.3);
+            padding: 14px;
+            border-radius: 15px;
+            margin: 14px 0;
+            font-size: 15px;
+            text-align: center;
+            min-height: 54px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
-        .prize-win {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #f5af19, #f12711);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: winGlow 0.8s ease 3;
-        }
-        @keyframes winGlow {
-            0% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.7; }
-        }
-        .prize-common {
-            font-size: 24px;
-            font-weight: 600;
-            color: #b0b0c8;
-        }
-        /* Кнопка открытия */
-        .open-btn {
-            background: linear-gradient(145deg, #f5af19, #f12711);
-            border: none;
+        .status-box .emoji { font-size: 22px; margin-right: 8px; }
+        .status-box .retry-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
             color: #fff;
-            font-weight: 800;
-            font-size: 20px;
-            letter-spacing: 2px;
-            padding: 18px 28px;
-            border-radius: 100px;
-            width: 100%;
-            max-width: 280px;
-            box-shadow: 0 8px 30px rgba(241, 39, 17, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-            touch-action: manipulation;
+            font-size: 13px;
         }
-        .open-btn:active:not(:disabled) {
-            transform: scale(0.96);
+        #spinBtn {
+            background: linear-gradient(145deg, #de9b35, #b97a1f);
+            border: none;
+            color: #1a1a2e;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 15px 32px;
+            border-radius: 50px;
+            width: 100%;
+            box-shadow: 0 5px 25px rgba(222,155,53,0.3);
+            cursor: pointer;
+            transition: opacity 0.3s;
+            display: block;
         }
-        .open-btn:disabled {
-            background: #3a3a4e;
-            color: #888;
+        #spinBtn:disabled {
+            background: #333c46;
+            color: #7a8794;
             box-shadow: none;
             cursor: not-allowed;
-            opacity: 0.6;
+            opacity: 0.7;
         }
-        .open-btn .shine {
-            position: absolute;
-            top: -50%;
-            left: -60%;
-            width: 40%;
-            height: 200%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transform: rotate(25deg);
-            animation: shine 3s infinite;
-        }
-        @keyframes shine {
-            0% { left: -60%; }
-            100% { left: 120%; }
-        }
-        .timer-box {
-            font-size: 16px;
+        .timer {
+            font-size: 18px;
             color: #ff6b6b;
-            font-weight: 600;
-            margin-top: 20px;
-            letter-spacing: 1px;
+            font-weight: bold;
+            margin-top: 12px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
         }
-        .footer-text {
-            margin-top: 25px;
+        .footer {
+            margin-top: 18px;
+            text-align: center;
+            color: rgba(255,255,255,0.3);
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.15);
-            letter-spacing: 1px;
         }
-        /* Адаптивность */
-        @media (max-width: 480px) {
-            .container { padding: 20px 16px; }
-            .case-image { width: 90px; height: 120px; font-size: 56px; }
-            .case-image .prize-label { font-size: 22px; }
-            .result-box .prize-win { font-size: 24px; }
-            .result-box .prize-common { font-size: 20px; }
+        .debug-info {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 11px;
+            color: #aaa;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="title">🎁 Cyber Case</div>
-            <div class="balance-box">💰 <span id="balanceDisplay">0</span></div>
-        </div>
-
-        <div class="case-scene">
-            <div class="case-box" id="caseBox">
-                <div class="case-image" id="caseImage">
-                    <span class="lock-icon" id="caseIcon">🔒</span>
-                </div>
-                <div class="case-name" id="caseName">НАЖМИ <span>ОТКРЫТЬ</span></div>
+            <h1>🎁 Открытие кейса</h1>
+            <div class="balance-container">
+                <span>💰</span>
+                <span class="balance-amount" id="balanceDisplay">0</span>
             </div>
         </div>
 
-        <div class="result-box" id="resultBox">
-            <span id="resultText" style="color:#666; font-size:16px; font-weight:500;">Готов к открытию</span>
+        <div class="case-wrap">
+            <div class="pointer"></div>
+            <div class="center-line"></div>
+            <div class="reel-viewport">
+                <div class="reel" id="reel"></div>
+            </div>
         </div>
 
-        <button class="open-btn" id="openBtn" disabled>
-            <span class="shine"></span>
-            <span id="btnText">⏳ ЗАГРУЗКА...</span>
-        </button>
-        <div id="timerDisplay" class="timer-box"></div>
-        <div class="footer-text">открытие кейсов cs2 style</div>
+        <div class="status-box" id="statusMessage">
+            <span class="emoji">⏳</span>
+            <span>Загрузка...</span>
+        </div>
+
+        <button id="spinBtn" disabled>🎁 Открыть кейс</button>
+        <div id="timerDisplay" class="timer"></div>
+        <div class="footer">Открытие доступно раз в 24 часа</div>
+        <div id="debugInfo" class="debug-info"></div>
     </div>
 
     <script>
-        // ============================================================
-        // 1. ИНИЦИАЛИЗАЦИЯ TELEGRAM WEB APP
-        // ============================================================
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
-        console.log('🎁 Cyber Case загружен');
-        console.log('👤 User ID:', tg.initDataUnsafe?.user?.id || 'неизвестно');
+        const API_BASE = 'https://cyberxgift.ru';
+        const ICONS = ['💎', '🪙', '⭐', '🎮', '🔥', '🏆'];
 
-        // ============================================================
-        // 2. НАСТРОЙКИ ПРИЗОВ (как слоты в кейсе)
-        // ============================================================
-        const prizes = [
-            { label: '★ 1000', value: 1000, color: '#f94144', rarity: 'legendary' },
-            { label: '★ 500', value: 500, color: '#f3722c', rarity: 'legendary' },
-            { label: '★ 200', value: 200, color: '#f8961e', rarity: 'epic' },
-            { label: '★ 100', value: 100, color: '#f9c74f', rarity: 'epic' },
-            { label: '50', value: 50, color: '#90be6d', rarity: 'rare' },
-            { label: '20', value: 20, color: '#577590', rarity: 'common' },
-            { label: '10', value: 10, color: '#9b5de5', rarity: 'common' },
-            { label: '5', value: 5, color: '#6c757d', rarity: 'common' }
-        ];
-
-        // ============================================================
-        // 3. DOM ЭЛЕМЕНТЫ
-        // ============================================================
-        const openBtn = document.getElementById('openBtn');
-        const btnText = document.getElementById('btnText');
-        const caseBox = document.getElementById('caseBox');
-        const caseImage = document.getElementById('caseImage');
-        const caseIcon = document.getElementById('caseIcon');
-        const caseName = document.getElementById('caseName');
-        const resultText = document.getElementById('resultText');
-        const balanceDisplay = document.getElementById('balanceDisplay');
+        const reel = document.getElementById('reel');
+        const spinBtn = document.getElementById('spinBtn');
+        const statusMsg = document.getElementById('statusMessage');
         const timerDisplay = document.getElementById('timerDisplay');
+        const balanceDisplay = document.getElementById('balanceDisplay');
+        const debugInfo = document.getElementById('debugInfo');
 
-        let canOpen = false;
-        let isOpening = false;
+        let prizesPool = [];
+        let canSpin = false;
+        let isSpinning = false;
         let timerInterval = null;
 
-        // ============================================================
-        // 4. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
-        // ============================================================
-        function updateBalance(balance) {
-            balanceDisplay.textContent = balance;
+        function addDebug(msg) {
+            const time = new Date().toLocaleTimeString();
+            console.log(`🐛 ${time}: ${msg}`);
+            debugInfo.innerHTML += `<div>${time}: ${msg}</div>`;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+
+        function updateStatus(emoji, text, isError = false) {
+            const emojiSpan = `<span class="emoji">${emoji}</span>`;
+            const textSpan = `<span style="${isError ? 'color:#ff6b6b;' : ''}">${text}</span>`;
+            const retryBtn = isError ? `<button class="retry-btn" onclick="checkStatus()">🔄 Повторить</button>` : '';
+            statusMsg.innerHTML = emojiSpan + textSpan + retryBtn;
         }
 
         function updateTimer(seconds) {
-            if (seconds <= 0) {
+            if (seconds <= 0) { timerDisplay.textContent = ''; return; }
+            const h = Math.floor(seconds/3600), m = Math.floor((seconds%3600)/60), s = seconds%60;
+            timerDisplay.textContent = `⏳ ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        function updateBalance(balance) { balanceDisplay.textContent = balance; }
+
+        function iconFor(prize) {
+            return prize.is_points ? '🪙' : '🎮';
+        }
+
+        function renderItem(prize) {
+            const el = document.createElement('div');
+            el.className = 'case-item';
+            el.style.setProperty('--c', prize.color || '#de9b35');
+            el.innerHTML = `<div class="icon">${iconFor(prize)}</div><div class="label">${prize.label}</div>`;
+            return el;
+        }
+
+        // ===== API =====
+        async function apiFetch(path, options = {}) {
+            const controller = new AbortController();
+            const t = setTimeout(() => controller.abort(), 15000);
+            try {
+                const resp = await fetch(API_BASE + path, { ...options, signal: controller.signal });
+                clearTimeout(t);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                return await resp.json();
+            } catch (e) {
+                clearTimeout(t);
+                throw e;
+            }
+        }
+
+        async function loadPrizes() {
+            const data = await apiFetch('/api/prizes');
+            prizesPool = data.prizes || [];
+            buildIdleReel();
+        }
+
+        function buildIdleReel() {
+            reel.innerHTML = '';
+            if (prizesPool.length === 0) return;
+            for (let i = 0; i < 12; i++) {
+                reel.appendChild(renderItem(prizesPool[i % prizesPool.length]));
+            }
+        }
+
+        async function checkStatus() {
+            addDebug('🔍 Проверка статуса...');
+            updateStatus('⏳', 'Проверка...');
+            spinBtn.disabled = true;
+            try {
+                const data = await apiFetch(`/api/status?init_data=${encodeURIComponent(tg.initData)}`);
+                addDebug(`📨 Ответ: status=${data.status}`);
+                handleServerResponse(data);
+            } catch (e) {
+                addDebug(`⏰ Ошибка запроса: ${e.message}`);
+                updateStatus('⚠️', 'Нет ответа от сервера', true);
+                spinBtn.disabled = true;
+            }
+        }
+
+        function handleServerResponse(data) {
+            if (data.status === 'can_spin') {
+                canSpin = true;
+                spinBtn.disabled = false;
+                updateStatus('🎯', 'Кейс готов! Жми на кнопку');
                 timerDisplay.textContent = '';
+                if (data.balance !== undefined) updateBalance(data.balance);
+
+            } else if (data.status === 'wait') {
+                canSpin = false;
+                spinBtn.disabled = true;
+                updateStatus('⏳', 'Кулдаун активен!');
+                updateTimer(data.wait_time);
+                if (data.balance !== undefined) updateBalance(data.balance);
+
+                if (timerInterval) clearInterval(timerInterval);
+                let remaining = data.wait_time;
+                timerInterval = setInterval(() => {
+                    remaining--;
+                    updateTimer(remaining);
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        checkStatus();
+                    }
+                }, 1000);
+
+            } else if (data.error) {
+                updateStatus('❌', data.error, true);
+            }
+        }
+
+        // ===== АНИМАЦИЯ ОТКРЫТИЯ КЕЙСА =====
+        const ITEM_STEP = 128; // ширина .case-item + 2*margin(8px) = 112+16
+        const REEL_LENGTH = 45;
+        const TARGET_INDEX = REEL_LENGTH - 7;
+
+        function buildSpinReel(winningPrize) {
+            reel.style.transition = 'none';
+            reel.style.transform = 'translateX(0px)';
+            reel.innerHTML = '';
+
+            for (let i = 0; i < REEL_LENGTH; i++) {
+                const prize = (i === TARGET_INDEX)
+                    ? winningPrize
+                    : prizesPool[Math.floor(Math.random() * prizesPool.length)];
+                const el = renderItem(prize);
+                if (i === TARGET_INDEX) el.classList.add('target-cell');
+                reel.appendChild(el);
+            }
+        }
+
+        async function spinCase() {
+            if (isSpinning || !canSpin || prizesPool.length === 0) return;
+            isSpinning = true;
+            spinBtn.disabled = true;
+            updateStatus('🌀', 'Открываем кейс...');
+
+            let result;
+            try {
+                result = await apiFetch('/api/spin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ init_data: tg.initData })
+                });
+            } catch (e) {
+                addDebug(`❌ Ошибка запроса спина: ${e.message}`);
+                updateStatus('⚠️', 'Нет ответа от сервера', true);
+                isSpinning = false;
+                spinBtn.disabled = false;
                 return;
             }
-            const hours = Math.floor(seconds/3600);
-            const mins = Math.floor((seconds%3600)/60);
-            const secs = seconds%60;
-            timerDisplay.textContent = `⏳ ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-        }
 
-        function setStatus(text, isError = false, isSuccess = false) {
-            resultText.textContent = text;
-            resultText.style.color = isError ? '#ff6b6b' : isSuccess ? '#69db7c' : '#b0b0c8';
-        }
-
-        function setCaseState(state) {
-            // state: 'locked', 'opening', 'result'
-            if (state === 'locked') {
-                caseBox.classList.remove('opening');
-                caseIcon.textContent = '🔒';
-                caseName.innerHTML = 'НАЖМИ <span>ОТКРЫТЬ</span>';
-            } else if (state === 'opening') {
-                caseBox.classList.add('opening');
-                caseIcon.textContent = '🌀';
-                caseName.innerHTML = 'ОТКРЫТИЕ <span>...</span>';
-            } else if (state === 'result') {
-                caseBox.classList.remove('opening');
-                // иконка и имя обновятся из результата
+            if (result.status === 'wait') {
+                isSpinning = false;
+                handleServerResponse(result);
+                return;
             }
-        }
-
-        // ============================================================
-        // 5. ОТПРАВКА ДАННЫХ БОТУ
-        // ============================================================
-        function sendToBot(data) {
-            try {
-                tg.sendData(data);
-                console.log('📤 Отправлено:', data);
-                return true;
-            } catch (e) {
-                console.error('❌ Ошибка отправки:', e);
-                return false;
+            if (result.error) {
+                isSpinning = false;
+                updateStatus('❌', result.error, true);
+                spinBtn.disabled = false;
+                return;
             }
-        }
 
-        // ============================================================
-        // 6. ОСНОВНАЯ ЛОГИКА: ПРОВЕРКА СТАТУСА
-        // ============================================================
-        function checkStatus() {
-            setStatus('⏳ Проверка...');
-            openBtn.disabled = true;
-            btnText.textContent = '⏳ ЗАГРУЗКА...';
-            sendToBot('get_status');
-        }
+            const prize = result.prize;
+            buildSpinReel(prize);
 
-        // ============================================================
-        // 7. ОСНОВНАЯ ЛОГИКА: ОТКРЫТИЕ КЕЙСА (анимация)
-        // ============================================================
-        function openCase() {
-            if (isOpening || !canOpen) return;
-            isOpening = true;
-            canOpen = false;
-            openBtn.disabled = true;
-            btnText.textContent = '🌀 ОТКРЫТИЕ...';
+            const viewportWidth = reel.parentElement.clientWidth;
+            const jitter = (Math.random() - 0.5) * ITEM_STEP * 0.5;
+            const targetOffset = TARGET_INDEX * ITEM_STEP + ITEM_STEP / 2;
+            const translateX = viewportWidth / 2 - targetOffset + jitter;
 
-            setCaseState('opening');
-            setStatus('🎲 Выпадает приз...');
+            requestAnimationFrame(() => {
+                reel.style.transition = 'transform 4.2s cubic-bezier(0.12, 0.65, 0.15, 1)';
+                reel.style.transform = `translateX(${translateX}px)`;
+            });
 
-            // Выбираем случайный приз
-            const prize = prizes[Math.floor(Math.random() * prizes.length)];
+            setTimeout(() => {
+                const cells = reel.querySelectorAll('.case-item');
+                if (cells[TARGET_INDEX]) cells[TARGET_INDEX].classList.add('winner');
 
-            // Анимация "прокрутки" символов
-            let count = 0;
-            const maxCount = 20;
-            const interval = setInterval(() => {
-                const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
-                caseIcon.textContent = randomPrize.label;
-                caseImage.style.transform = `scale(${1 + Math.random() * 0.2})`;
-                caseImage.style.borderColor = randomPrize.color;
+                const prizeText = prize.is_points
+                    ? `${prize.label}!`
+                    : `${prize.label} 🎉`;
+                updateStatus('🎉', `Выпало: ${prizeText}`);
+                if (result.new_balance !== undefined) updateBalance(result.new_balance);
 
-                count++;
-                if (count >= maxCount) {
-                    clearInterval(interval);
-                    // Финальный результат
-                    caseIcon.textContent = prize.label;
-                    caseImage.style.transform = 'scale(1)';
-                    caseImage.style.borderColor = prize.color;
-                    caseName.innerHTML = `ВЫИГРАНО <span>${prize.label}</span>`;
-                    setStatus(`🎉 Выиграно ${prize.label} монет!`, false, true);
-
-                    // Отправляем результат боту
-                    const data = 'spin_result:' + JSON.stringify({
-                        prize_id: prizes.indexOf(prize),
-                        prize_name: prize.label,
-                        value: prize.value
+                try {
+                    tg.showPopup({
+                        title: '🎉 Поздравляем!',
+                        message: prize.is_points
+                            ? `Вы выиграли ${prize.value} монет!`
+                            : `Вы выиграли: ${prize.label}!`,
+                        buttons: [{ type: 'ok' }]
                     });
-                    sendToBot(data);
+                } catch (e) {}
 
-                    isOpening = false;
-                    openBtn.disabled = true;
-                    btnText.textContent = '⏳ ОЖИДАНИЕ...';
-                    setCaseState('result');
-
-                    // Через 3 секунды проверяем статус снова
-                    setTimeout(() => {
-                        checkStatus();
-                    }, 3000);
-                }
-            }, 150);
+                isSpinning = false;
+                setTimeout(checkStatus, 3000);
+            }, 4400);
         }
 
-        // ============================================================
-        // 8. ОБРАБОТКА ОТВЕТОВ ОТ БОТА
-        // ============================================================
-        tg.onEvent('message', (event) => {
-            console.log('📨 Ответ от бота:', event.data);
+        spinBtn.addEventListener('click', spinCase);
 
+        // ===== СТАРТ =====
+        addDebug('🎁 Приложение загружено');
+        (async () => {
             try {
-                const data = JSON.parse(event.data);
-                console.log('📊 Парсинг:', data);
-
-                if (data.status === 'can_spin') {
-                    canOpen = true;
-                    openBtn.disabled = false;
-                    btnText.textContent = '🔓 ОТКРЫТЬ КЕЙС';
-                    setStatus('🎯 Нажми "Открыть кейс"');
-                    timerDisplay.textContent = '';
-                    if (data.balance !== undefined) updateBalance(data.balance);
-                    setCaseState('locked');
-
-                } else if (data.status === 'wait') {
-                    canOpen = false;
-                    openBtn.disabled = true;
-                    btnText.textContent = '⏳ ОЖИДАНИЕ';
-                    setStatus(`⏳ Кулдаун: ${data.wait_time} сек`);
-                    updateTimer(data.wait_time);
-                    if (data.balance !== undefined) updateBalance(data.balance);
-                    setCaseState('locked');
-
-                    if (timerInterval) clearInterval(timerInterval);
-                    let remaining = data.wait_time;
-                    timerInterval = setInterval(() => {
-                        remaining--;
-                        updateTimer(remaining);
-                        if (remaining <= 0) {
-                            clearInterval(timerInterval);
-                            timerInterval = null;
-                            checkStatus();
-                        }
-                    }, 1000);
-
-                } else if (data.status === 'success') {
-                    setStatus(`🎉 Выиграно ${data.prize} монет!`, false, true);
-                    if (data.new_balance !== undefined) updateBalance(data.new_balance);
-                    setCaseState('result');
-                    // показываем выигрыш в кейсе
-                    caseIcon.textContent = data.prize;
-                    caseName.innerHTML = `ВЫИГРАНО <span>${data.prize}</span>`;
-                    try {
-                        tg.showPopup({
-                            title: '🎉 Открытие кейса!',
-                            message: `Вы выиграли ${data.value} монет!`,
-                            buttons: [{ type: 'ok' }]
-                        });
-                    } catch(e) {}
-
-                } else if (data.error) {
-                    setStatus(`❌ ${data.error}`, true);
-                    openBtn.disabled = true;
-                    btnText.textContent = '⚠️ ОШИБКА';
-                }
-
+                await loadPrizes();
             } catch (e) {
-                console.error('❌ Ошибка парсинга:', e);
-                setStatus('📨 Ошибка ответа', true);
+                addDebug(`❌ Ошибка загрузки призов: ${e.message}`);
             }
-        });
-
-        // ============================================================
-        // 9. ОБРАБОТЧИКИ СОБЫТИЙ
-        // ============================================================
-        openBtn.addEventListener('click', openCase);
-
-        // ============================================================
-        // 10. ЗАПУСК
-        // ============================================================
-        setCaseState('locked');
-        setStatus('⏳ Загрузка...');
-        openBtn.disabled = true;
-        btnText.textContent = '⏳ ЗАГРУЗКА...';
-
-        // Запрос статуса через 0.5 секунды
-        setTimeout(checkStatus, 500);
-
-        console.log('✅ Cyber Case готов!');
+            setTimeout(checkStatus, 600);
+        })();
     </script>
 </body>
 </html>

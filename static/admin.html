@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Админ-панель</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0e1621;
+            color: #fff;
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 14px;
+            padding-bottom: 40px;
+        }
+        h1 { font-size: 20px; margin-bottom: 4px; color: #de9b35; }
+        .sub { color: rgba(255,255,255,0.4); font-size: 12px; margin-bottom: 16px; }
+        .card {
+            background: #16202c;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .card.inactive { opacity: 0.45; }
+        .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .prize-label { font-weight: 600; font-size: 15px; }
+        .prize-meta { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+        .swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; margin-right: 6px; vertical-align: -2px; }
+        .btns { display: flex; gap: 6px; flex-shrink: 0; }
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-edit { background: rgba(255,255,255,0.1); color: #fff; }
+        .btn-del { background: rgba(255,80,80,0.15); color: #ff6b6b; }
+        .btn-primary { background: linear-gradient(145deg, #de9b35, #b97a1f); color: #1a1a2e; width: 100%; padding: 12px; font-size: 15px; margin-top: 10px; }
+        .btn-toggle { background: rgba(80,180,255,0.15); color: #6cc4ff; }
+
+        .modal-bg {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: none; align-items: flex-end; justify-content: center; z-index: 50;
+        }
+        .modal-bg.open { display: flex; }
+        .modal {
+            background: #16202c; border-radius: 16px 16px 0 0;
+            padding: 18px; width: 100%; max-width: 480px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .field { margin-bottom: 12px; }
+        .field label { display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+        .field input[type=text], .field input[type=number] {
+            width: 100%; padding: 10px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15); background: #0e1621; color: #fff; font-size: 14px;
+        }
+        .field-row { display: flex; gap: 10px; }
+        .field-row .field { flex: 1; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+        .modal-actions button { flex: 1; }
+        .colors { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-dot.selected { border-color: #fff; }
+        .denied { text-align: center; margin-top: 60px; color: rgba(255,255,255,0.5); }
+        .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+        .tab { flex: 1; text-align: center; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.06); cursor: pointer; font-size: 13px; }
+        .tab.active { background: #de9b35; color: #1a1a2e; font-weight: 700; }
+        .win-row { font-size: 13px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .win-row .u { color: rgba(255,255,255,0.5); font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>⚙️ Управление призами</h1>
+        <div class="sub" id="subline">Загрузка...</div>
+
+        <div class="tabs">
+            <div class="tab active" id="tabPrizes" onclick="switchTab('prizes')">Призы</div>
+            <div class="tab" id="tabWins" onclick="switchTab('wins')">История</div>
+        </div>
+
+        <div id="prizesTab"></div>
+        <div id="winsTab" style="display:none;"></div>
+
+        <button class="btn-primary" id="addBtn" onclick="openEditor(null)">➕ Добавить приз</button>
+    </div>
+
+    <div class="modal-bg" id="modalBg">
+        <div class="modal">
+            <div class="field">
+                <label>Название приза</label>
+                <input type="text" id="fLabel" placeholder="Например: 50 бонусов">
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="fIsPoints" checked onchange="toggleValueField()">
+                <label for="fIsPoints" style="margin:0;">Это бонусные очки (добавляются на баланс)</label>
+            </div>
+            <div class="field-row">
+                <div class="field" id="valueWrap">
+                    <label>Кол-во бонусов</label>
+                    <input type="number" id="fValue" value="50">
+                </div>
+                <div class="field">
+                    <label>Вес (шанс выпадения)</label>
+                    <input type="number" id="fWeight" value="1" min="0">
+                </div>
+            </div>
+            <div class="field">
+                <label>Цвет</label>
+                <div class="colors" id="colorPicker"></div>
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="fActive" checked>
+                <label for="fActive" style="margin:0;">Активен (участвует в розыгрыше)</label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-edit" onclick="closeEditor()">Отмена</button>
+                <button class="btn-primary" onclick="saveEditor()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const API_BASE = 'https://cyberxgift.ru';
+        const PALETTE = ['#4b69ff', '#8847ff', '#d32ce6', '#eb4b4b', '#f5c842', '#43aa8b', '#de9b35', '#6cc4ff'];
+
+        let editingId = null;
+        let currentPrizes = [];
+
+        async function api(path, options = {}) {
+            const resp = await fetch(API_BASE + path, options);
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            return data;
+        }
+
+        function renderColorPicker(selected) {
+            const wrap = document.getElementById('colorPicker');
+            wrap.innerHTML = '';
+            PALETTE.forEach(c => {
+                const dot = document.createElement('div');
+                dot.className = 'color-dot' + (c === selected ? ' selected' : '');
+                dot.style.background = c;
+                dot.dataset.color = c;
+                dot.onclick = () => {
+                    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                    dot.classList.add('selected');
+                };
+                wrap.appendChild(dot);
+            });
+        }
+
+        function toggleValueField() {
+            const isPoints = document.getElementById('fIsPoints').checked;
+            document.getElementById('valueWrap').style.display = isPoints ? 'block' : 'none';
+        }
+
+        function openEditor(prize) {
+            editingId = prize ? prize.id : null;
+            document.getElementById('fLabel').value = prize ? prize.label : '';
+            document.getElementById('fIsPoints').checked = prize ? !!prize.is_points : true;
+            document.getElementById('fValue').value = prize ? prize.value : 50;
+            document.getElementById('fWeight').value = prize ? prize.weight : 1;
+            document.getElementById('fActive').checked = prize ? !!prize.active : true;
+            renderColorPicker(prize ? prize.color : PALETTE[0]);
+            toggleValueField();
+            document.getElementById('modalBg').classList.add('open');
+        }
+
+        function closeEditor() {
+            document.getElementById('modalBg').classList.remove('open');
+        }
+
+        async function saveEditor() {
+            const label = document.getElementById('fLabel').value.trim();
+            if (!label) { alert('Введите название приза'); return; }
+            const selectedDot = document.querySelector('.color-dot.selected');
+            const body = {
+                init_data: tg.initData,
+                id: editingId,
+                label,
+                is_points: document.getElementById('fIsPoints').checked,
+                value: parseInt(document.getElementById('fValue').value) || 0,
+                weight: parseInt(document.getElementById('fWeight').value) || 1,
+                color: selectedDot ? selectedDot.dataset.color : PALETTE[0],
+                active: document.getElementById('fActive').checked,
+            };
+            try {
+                await api('/api/admin/prizes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                closeEditor();
+                await loadPrizes();
+            } catch (e) {
+                alert('Ошибка сохранения: ' + e.message);
+            }
+        }
+
+        async function deletePrize(id) {
+            if (!confirm('Удалить этот приз?')) return;
+            try {
+                await api('/api/admin/prizes/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ init_data: tg.initData, id })
+                });
+                await loadPrizes();
+            } catch (e) {
+                alert('Ошибка удаления: ' + e.message);
+            }
+        }
+
+        function renderPrizes() {
+            const wrap = document.getElementById('prizesTab');
+            wrap.innerHTML = '';
+            currentPrizes.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'card' + (p.active ? '' : ' inactive');
+                card.innerHTML = `
+                    <div class="row">
+                        <div>
+                            <div class="prize-label"><span class="swatch" style="background:${p.color}"></span>${p.label}</div>
+                            <div class="prize-meta">${p.is_points ? p.value + ' бонусов' : 'неденежный приз'} · вес ${p.weight}${p.active ? '' : ' · выключен'}</div>
+                        </div>
+                        <div class="btns">
+                            <button class="btn-toggle" onclick="toggleActive(${p.id}, ${p.active})">${p.active ? '🙈' : '👁️'}</button>
+                            <button class="btn-edit" onclick='openEditor(${JSON.stringify(p)})'>✏️</button>
+                            <button class="btn-del" onclick="deletePrize(${p.id})">🗑️</button>
+                        </div>
+                    </div>`;
+                wrap.appendChild(card);
+            });
+        }
+
+        async function toggleActive(id, currentActive) {
+            const prize = currentPrizes.find(p => p.id === id);
+            if (!prize) return;
+            try {
+                await api('/api/admin/prizes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...prize, init_data: tg.initData, active: !currentActive })
+                });
+                await loadPrizes();
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        async function loadPrizes() {
+            const data = await api(`/api/admin/prizes?init_data=${encodeURIComponent(tg.initData)}`);
+            currentPrizes = data.prizes || [];
+            renderPrizes();
+        }
+
+        async function loadWins() {
+            const data = await api(`/api/admin/wins?init_data=${encodeURIComponent(tg.initData)}`);
+            const wrap = document.getElementById('winsTab');
+            wrap.innerHTML = '';
+            (data.wins || []).forEach(w => {
+                const d = new Date(w.created_at * 1000);
+                const row = document.createElement('div');
+                row.className = 'win-row';
+                row.innerHTML = `🎁 <b>${w.prize_label}</b>${w.is_points ? '' : ' <span style="color:#de9b35;">(нужно выдать)</span>'}<br>
+                    <span class="u">@${w.username || 'без username'} (id ${w.user_id}) · ${d.toLocaleString()}</span>`;
+                wrap.appendChild(row);
+            });
+            if (!data.wins || data.wins.length === 0) {
+                wrap.innerHTML = '<div class="sub">Пока никто ничего не выигрывал.</div>';
+            }
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tabPrizes').classList.toggle('active', tab === 'prizes');
+            document.getElementById('tabWins').classList.toggle('active', tab === 'wins');
+            document.getElementById('prizesTab').style.display = tab === 'prizes' ? 'block' : 'none';
+            document.getElementById('winsTab').style.display = tab === 'wins' ? 'block' : 'none';
+            document.getElementById('addBtn').style.display = tab === 'prizes' ? 'block' : 'none';
+            if (tab === 'wins') loadWins();
+        }
+
+        (async () => {
+            try {
+                await loadPrizes();
+                document.getElementById('subline').textContent = 'Изменения применяются сразу для всех игроков';
+            } catch (e) {
+                document.getElementById('app').innerHTML = `<div class="denied">🚫 Доступ запрещён<br><span style="font-size:12px;">${e.message}</span></div>`;
+            }
+        })();
+    </script>
+</body>
+</html>

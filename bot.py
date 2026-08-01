@@ -197,6 +197,15 @@ async def run_web_server():
 async def main():
     await db.init_db()
     await run_web_server()
+
+    # На боте мог остаться активный webhook (например, с прошлых тестов) —
+    # он конфликтует с polling и Telegram отдаёт TelegramConflictError.
+    # Снимаем его перед стартом, чтобы polling заработал гарантированно.
+    webhook_info = await bot.get_webhook_info()
+    if webhook_info.url:
+        log.warning("Обнаружен активный webhook (%s) — удаляю перед polling", webhook_info.url)
+        await bot.delete_webhook(drop_pending_updates=True)
+
     log.info("🤖 Бот запущен, начинаем polling...")
     await dp.start_polling(bot)
 

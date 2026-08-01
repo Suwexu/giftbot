@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 API_TOKEN = os.getenv('BOT_TOKEN')
 PORT = int(os.getenv('PORT', 443))
 WEBAPP_URL = "https://cyberxgift.ru/static/"
-WEBHOOK_URL = "https://cyberxgift.ru/webhook"
 
 if not API_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения!")
@@ -231,71 +230,55 @@ async def spin_result_handler(message: types.Message):
             f"🔄 Попробуй снова через 24 часа!"
         )
 
-# ========== ОБРАБОТЧИКИ WEBHOOK ==========
-
-async def webhook_check(request):
-    """Простой обработчик для проверки вебхука Telegram"""
-    return web.Response(text="OK", status=200)
-
-async def handle_webhook(request):
-    """Основной обработчик вебхука"""
-    try:
-        data = await request.json()
-        update = types.Update(**data)
-        await dp.feed_update(bot, update)
-        return web.Response(status=200)
-    except Exception as e:
-        logger.error(f"❌ Ошибка webhook: {e}")
-        return web.Response(status=500)
+# ========== ВЕБ-СЕРВЕР ДЛЯ СТАТИКИ И HEALTHCHECK ==========
 
 async def healthcheck(request):
     return web.Response(text="OK", status=200)
 
-# ========== ЗАПУСК ==========
+# ========== ЗАПУСК В POLLING-РЕЖИМЕ ==========
 
-async def main():
-    await init_db()
-    
-    # Создаем приложение с CORS
+async def start_http_server():
+    """Запуск HTTP сервера для статики и healthcheck"""
     app = web.Application(middlewares=[cors_middleware])
-    
-    # Добавляем маршруты
     app.router.add_get('/health', healthcheck)
-    app.router.add_get('/webhook', webhook_check)  # <-- ДЛЯ ПРОВЕРКИ TELEGRAM
-    app.router.add_post('/webhook', handle_webhook)  # <-- ОСНОВНОЙ
     app.router.add_static('/static/', path='static/', name='static', show_index=True)
     
-    # Запускаем сервер
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=PORT)
     await site.start()
-    
-    logger.info(f"🌐 Сервер запущен на порту {PORT}")
+    logger.info(f"🌐 HTTP сервер запущен на порту {PORT}")
     logger.info(f"📁 Статика: {WEBAPP_URL}")
-    logger.info(f"🔗 Webhook: {WEBHOOK_URL}")
+
+async def main():
+    """Основная функция запуска"""
+    # Инициализация БД
+    await init_db()
     
-    # Устанавливаем webhook
+    # Запускаем HTTP сервер в фоне для статики
+    asyncio.create_task(start_http_server())
+    
+    # Даём серверу время запуститься
+    await asyncio.sleep(1)
+    
+    # ЗАПУСКАЕМ БОТА В POLLING-РЕЖИМЕ
+    logger.info("🚀 Бот запускается в polling-режиме...")
+    
+    # Удаляем старый webhook, если был
     try:
-        # Сначала удаляем старый webhook
         await bot.delete_webhook()
-        logger.info("🔄 Старый webhook удалён")
-        
-        # Устанавливаем новый
-        await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
-        logger.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
+        logger.info("✅ Webhook удалён")
     except Exception as e:
-        logger.error(f"❌ Ошибка установки webhook: {e}")
-        logger.info("🔄 Переключаемся на polling...")
-        await bot.delete_webhook()
-        await dp.start_polling(bot)
-        return
+        logger.warning(f"⚠️ Ошибка удаления webhook: {e}")
     
-    # Держим сервер активным
+    logger.info("🔄 Запуск polling...")
     try:
-        await asyncio.Event().wait()
-    except KeyboardInterrupt:
-        logger.info("🛑 Бот остановлен")
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"❌ Ошибка polling: {e}")
+        await asyncio.sleep(5)
+        logger.info("🔄 Повторная попытка запуска polling...")
+        await dp.start_polling(bot)
 
 if __name__ == '__main__':
     try:

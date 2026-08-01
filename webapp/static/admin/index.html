@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>CyberX · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Chakra+Petch:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div id="deniedScreen" class="denied hidden">
+  <div class="denied-box">
+    <p class="denied-code">ACCESS_DENIED :: 403</p>
+    <h2>Доступ только для администраторов</h2>
+    <p>Открой эту панель через кнопку в боте под своим Telegram-аккаунтом.</p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="logo"><span class="logo-bracket">[</span>CYBER<span class="accent-x">X</span><span class="logo-bracket">]</span> <span class="logo-sub">ADMIN</span></div>
+    <div class="user-chip" id="userChip">admin</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Дашборд</button>
+    <button class="tab-btn" data-tab="prizes">Призы</button>
+    <button class="tab-btn" data-tab="vault">Корзинки</button>
+  </nav>
+
+  <main id="tab-dashboard" class="tab-panel active">
+    <div class="stat-grid" id="statGrid"></div>
+  </main>
+
+  <main id="tab-prizes" class="tab-panel">
+    <div class="section-head">
+      <h2>Призовой пул</h2>
+      <button class="btn-primary" id="addPrizeBtn">+ Добавить приз</button>
+    </div>
+    <div id="prizesList" class="cards-list"></div>
+  </main>
+
+  <main id="tab-vault" class="tab-panel">
+    <div class="section-head">
+      <h2>Корзинки гостей</h2>
+      <div class="filter-row">
+        <button class="chip active" data-status="">Все</button>
+        <button class="chip" data-status="locked">🔒 Под замком</button>
+        <button class="chip" data-status="unlocked">🔓 Готовы</button>
+        <button class="chip" data-status="issued">✅ Выданы</button>
+      </div>
+    </div>
+    <div id="vaultAdminList" class="cards-list"></div>
+  </main>
+</div>
+
+<!-- Модалка добавления/редактирования приза -->
+<div id="prizeModal" class="modal hidden">
+  <div class="modal-box">
+    <h3 id="modalTitle">Новый приз</h3>
+    <label>Название</label>
+    <input id="fName" type="text" placeholder="Наушники HyperX" />
+    <label>Описание</label>
+    <input id="fDesc" type="text" placeholder="Кратко о призе" />
+    <label>Ссылка на картинку (необязательно)</label>
+    <input id="fImage" type="text" placeholder="https://..." />
+    <div class="modal-row">
+      <div>
+        <label>Шанс (вес)</label>
+        <input id="fWeight" type="number" min="1" value="1" />
+      </div>
+      <div>
+        <label>Остаток (-1 = безлимит)</label>
+        <input id="fStock" type="number" value="-1" />
+      </div>
+    </div>
+    <label class="switch-row">
+      <input id="fActive" type="checkbox" checked />
+      <span>Активен (выпадает гостям)</span>
+    </label>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modalCancel">Отмена</button>
+      <button class="btn-primary" id="modalSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

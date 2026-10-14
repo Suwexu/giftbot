@@ -1,65 +1,473 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>CyberX Community</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Chakra+Petch:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css" />
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Открытие кейса</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: linear-gradient(145deg, #0a0f1a 0%, #1a1a2e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            color: white;
+            padding: 20px;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            padding: 25px 20px;
+            border-radius: 48px;
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 215, 0, 0.1);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+        }
+        .balance-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 15px;
+            font-weight: 600;
+            color: #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .balance-box span {
+            color: #fff;
+            font-weight: 700;
+        }
+        .case-scene {
+            position: relative;
+            margin: 15px 0 30px 0;
+            perspective: 800px;
+        }
+        .case-box {
+            background: linear-gradient(145deg, #2a2a3e, #161622);
+            border-radius: 24px;
+            padding: 35px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 260px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .case-box.opening {
+            animation: pulse 0.15s ease 4;
+            border-color: #ffd700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2), inset 0 0 40px rgba(255, 215, 0, 0.05);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .case-image {
+            width: 110px;
+            height: 140px;
+            background: linear-gradient(145deg, #3d3d5c, #1e1e32);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            font-weight: 900;
+            color: #ffd700;
+            border: 2px solid #ffd700;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+        .case-image .lock-icon {
+            font-size: 32px;
+            opacity: 0.6;
+        }
+        .case-image .prize-label {
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        .case-name {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #b0b0c8;
+            text-transform: uppercase;
+        }
+        .case-name span {
+            color: #ffd700;
+        }
+        .result-box {
+            margin: 10px 0 20px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .prize-win {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: winGlow 0.8s ease 3;
+        }
+        @keyframes winGlow {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+        .prize-common {
+            font-size: 24px;
+            font-weight: 600;
+            color: #b0b0c8;
+        }
+        .open-btn {
+            background: linear-gradient(145deg, #f5af19, #f12711);
+            border: none;
+            color: #fff;
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: 2px;
+            padding: 18px 28px;
+            border-radius: 100px;
+            width: 100%;
+            max-width: 280px;
+            box-shadow: 0 8px 30px rgba(241, 39, 17, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .open-btn:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        .open-btn:disabled {
+            background: #3a3a4e;
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .open-btn .shine {
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 40%;
+            height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(25deg);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine {
+            0% { left: -60%; }
+            100% { left: 120%; }
+        }
+        .timer-box {
+            font-size: 16px;
+            color: #ff6b6b;
+            font-weight: 600;
+            margin-top: 20px;
+            letter-spacing: 1px;
+        }
+        .footer-text {
+            margin-top: 25px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 1px;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 20px 16px; }
+            .case-image { width: 90px; height: 120px; font-size: 56px; }
+            .case-image .prize-label { font-size: 22px; }
+            .result-box .prize-win { font-size: 24px; }
+            .result-box .prize-common { font-size: 20px; }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🎁 Cyber Case</div>
+            <div class="balance-box">💰 <span id="balanceDisplay">0</span></div>
+        </div>
 
-<div class="scanlines"></div>
-<div class="grid-bg"></div>
+        <div class="case-scene">
+            <div class="case-box" id="caseBox">
+                <div class="case-image" id="caseImage">
+                    <span class="lock-icon" id="caseIcon">🔒</span>
+                </div>
+                <div class="case-name" id="caseName">НАЖМИ <span>ОТКРЫТЬ</span></div>
+            </div>
+        </div>
 
-<header class="topbar">
-  <div class="logo">
-    <span class="logo-bracket">[</span>CYBER<span class="accent-x">X</span><span class="logo-bracket">]</span>
-  </div>
-  <div class="user-chip" id="userChip">гость</div>
-</header>
+        <div class="result-box" id="resultBox">
+            <span id="resultText" style="color:#666; font-size:16px; font-weight:500;">Готов к открытию</span>
+        </div>
 
-<main id="view-prizes" class="view active">
-  <div class="hero">
-    <p class="eyebrow">// зона выдачи наград</p>
-    <h1>Забери свой дроп</h1>
-    <p class="sub">Жми на капсулу — приз попадёт в корзинку на 24 часа, потом можно забрать на ресепшене.</p>
-  </div>
+        <button class="open-btn" id="openBtn" disabled>
+            <span class="shine"></span>
+            <span id="btnText">⏳ ЗАГРУЗКА...</span>
+        </button>
+        <div id="timerDisplay" class="timer-box"></div>
+        <div class="footer-text">открытие кейсов cs2 style</div>
+    </div>
 
-  <button id="spinBtn" class="capsule-btn">
-    <span class="capsule-ring"></span>
-    <span class="capsule-core">
-      <span class="capsule-icon">◆</span>
-      <span class="capsule-label">ОТКРЫТЬ</span>
-    </span>
-  </button>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
 
-  <div id="prizeResult" class="prize-result hidden"></div>
-</main>
+        // Отключаем нативные кнопки Telegram, если они где-то включены
+        try {
+            tg.MainButton.hide();
+            tg.BackButton.hide();
+            if (tg.SecondaryButton) tg.SecondaryButton.hide();
+        } catch (e) {}
 
-<main id="view-vault" class="view">
-  <div class="hero">
-    <p class="eyebrow">// хранилище наград</p>
-    <h1>Корзинка</h1>
-    <p class="sub">Здесь лежит всё, что ты выиграл. Под замком — 24 часа с момента дропа.</p>
-  </div>
-  <div id="vaultList" class="vault-list"></div>
-</main>
+        console.log('🎁 Cyber Case загружен');
+        console.log('👤 User ID:', tg.initDataUnsafe?.user?.id || 'неизвестно');
 
-<nav class="tabbar">
-  <button class="tab-btn active" data-view="view-prizes">
-    <span class="tab-icon">🎁</span>
-    <span>Призы</span>
-  </button>
-  <button class="tab-btn" data-view="view-vault">
-    <span class="tab-icon tab-icon-lock">🔒</span>
-    <span>Корзинка</span>
-    <span id="vaultBadge" class="tab-badge hidden">0</span>
-  </button>
-</nav>
+        const prizes = [
+            { label: '★ 1000', value: 1000, color: '#f94144', rarity: 'legendary' },
+            { label: '★ 500', value: 500, color: '#f3722c', rarity: 'legendary' },
+            { label: '★ 200', value: 200, color: '#f8961e', rarity: 'epic' },
+            { label: '★ 100', value: 100, color: '#f9c74f', rarity: 'epic' },
+            { label: '50', value: 50, color: '#90be6d', rarity: 'rare' },
+            { label: '20', value: 20, color: '#577590', rarity: 'common' },
+            { label: '10', value: 10, color: '#9b5de5', rarity: 'common' },
+            { label: '5', value: 5, color: '#6c757d', rarity: 'common' }
+        ];
 
-<script src="app.js"></script>
+        const openBtn = document.getElementById('openBtn');
+        const btnText = document.getElementById('btnText');
+        const caseBox = document.getElementById('caseBox');
+        const caseImage = document.getElementById('caseImage');
+        const caseIcon = document.getElementById('caseIcon');
+        const caseName = document.getElementById('caseName');
+        const resultText = document.getElementById('resultText');
+        const balanceDisplay = document.getElementById('balanceDisplay');
+        const timerDisplay = document.getElementById('timerDisplay');
+
+        let canOpen = false;
+        let isOpening = false;
+        let timerInterval = null;
+
+        function updateBalance(balance) {
+            balanceDisplay.textContent = balance;
+        }
+
+        function updateTimer(seconds) {
+            if (seconds <= 0) {
+                timerDisplay.textContent = '';
+                return;
+            }
+            const hours = Math.floor(seconds/3600);
+            const mins = Math.floor((seconds%3600)/60);
+            const secs = seconds%60;
+            timerDisplay.textContent = `⏳ ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        }
+
+        function setStatus(text, isError = false, isSuccess = false) {
+            resultText.textContent = text;
+            resultText.style.color = isError ? '#ff6b6b' : isSuccess ? '#69db7c' : '#b0b0c8';
+        }
+
+        function setCaseState(state) {
+            if (state === 'locked') {
+                caseBox.classList.remove('opening');
+                caseIcon.textContent = '🔒';
+                caseName.innerHTML = 'НАЖМИ <span>ОТКРЫТЬ</span>';
+            } else if (state === 'opening') {
+                caseBox.classList.add('opening');
+                caseIcon.textContent = '🌀';
+                caseName.innerHTML = 'ОТКРЫТИЕ <span>...</span>';
+            } else if (state === 'result') {
+                caseBox.classList.remove('opening');
+            }
+        }
+
+        function sendToBot(data) {
+            try {
+                tg.sendData(data);
+                console.log('📤 Отправлено:', data);
+                return true;
+            } catch (e) {
+                console.error('❌ Ошибка отправки:', e);
+                return false;
+            }
+        }
+
+        function checkStatus() {
+            setStatus('⏳ Проверка...');
+            openBtn.disabled = true;
+            btnText.textContent = '⏳ ЗАГРУЗКА...';
+            sendToBot('get_status');
+        }
+
+        function openCase() {
+            if (isOpening || !canOpen) return;
+            isOpening = true;
+            canOpen = false;
+            openBtn.disabled = true;
+            btnText.textContent = '🌀 ОТКРЫТИЕ...';
+
+            setCaseState('opening');
+            setStatus('🎲 Выпадает приз...');
+
+            const prize = prizes[Math.floor(Math.random() * prizes.length)];
+
+            let count = 0;
+            const maxCount = 20;
+            const interval = setInterval(() => {
+                const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
+                caseIcon.textContent = randomPrize.label;
+                caseImage.style.transform = `scale(${1 + Math.random() * 0.2})`;
+                caseImage.style.borderColor = randomPrize.color;
+
+                count++;
+                if (count >= maxCount) {
+                    clearInterval(interval);
+                    caseIcon.textContent = prize.label;
+                    caseImage.style.transform = 'scale(1)';
+                    caseImage.style.borderColor = prize.color;
+                    caseName.innerHTML = `ВЫИГРАНО <span>${prize.label}</span>`;
+                    setStatus(`🎉 Выиграно ${prize.label} монет!`, false, true);
+
+                    const data = 'spin_result:' + JSON.stringify({
+                        prize_id: prizes.indexOf(prize),
+                        prize_name: prize.label,
+                        value: prize.value
+                    });
+                    sendToBot(data);
+
+                    isOpening = false;
+                    openBtn.disabled = true;
+                    btnText.textContent = '⏳ ОЖИДАНИЕ...';
+                    setCaseState('result');
+
+                    setTimeout(() => {
+                        checkStatus();
+                    }, 3000);
+                }
+            }, 150);
+        }
+
+        tg.onEvent('message', (event) => {
+            console.log('📨 Ответ от бота:', event.data);
+
+            try {
+                const data = JSON.parse(event.data);
+                console.log('📊 Парсинг:', data);
+
+                if (data.status === 'can_spin') {
+                    canOpen = true;
+                    openBtn.disabled = false;
+                    btnText.textContent = '🔓 ОТКРЫТЬ КЕЙС';
+                    setStatus('🎯 Нажми "Открыть кейс"');
+                    timerDisplay.textContent = '';
+                    if (data.balance !== undefined) updateBalance(data.balance);
+                    setCaseState('locked');
+
+                } else if (data.status === 'wait') {
+                    canOpen = false;
+                    openBtn.disabled = true;
+                    btnText.textContent = '⏳ ОЖИДАНИЕ';
+                    setStatus(`⏳ Кулдаун: ${data.wait_time} сек`);
+                    updateTimer(data.wait_time);
+                    if (data.balance !== undefined) updateBalance(data.balance);
+                    setCaseState('locked');
+
+                    if (timerInterval) clearInterval(timerInterval);
+                    let remaining = data.wait_time;
+                    timerInterval = setInterval(() => {
+                        remaining--;
+                        updateTimer(remaining);
+                        if (remaining <= 0) {
+                            clearInterval(timerInterval);
+                            timerInterval = null;
+                            checkStatus();
+                        }
+                    }, 1000);
+
+                } else if (data.status === 'success') {
+                    setStatus(`🎉 Выиграно ${data.prize} монет!`, false, true);
+                    if (data.new_balance !== undefined) updateBalance(data.new_balance);
+                    setCaseState('result');
+                    caseIcon.textContent = data.prize;
+                    caseName.innerHTML = `ВЫИГРАНО <span>${data.prize}</span>`;
+                    try {
+                        tg.showPopup({
+                            title: '🎉 Открытие кейса!',
+                            message: `Вы выиграли ${data.value} монет!`,
+                            buttons: [{ type: 'ok' }]
+                        });
+                    } catch(e) {}
+
+                } else if (data.error) {
+                    setStatus(`❌ ${data.error}`, true);
+                    openBtn.disabled = true;
+                    btnText.textContent = '⚠️ ОШИБКА';
+                }
+
+            } catch (e) {
+                console.error('❌ Ошибка парсинга:', e);
+                setStatus('📨 Ошибка ответа', true);
+            }
+        });
+
+        openBtn.addEventListener('click', openCase);
+
+        setCaseState('locked');
+        setStatus('⏳ Загрузка...');
+        openBtn.disabled = true;
+        btnText.textContent = '⏳ ЗАГРУЗКА...';
+
+        setTimeout(checkStatus, 500);
+
+        console.log('✅ Cyber Case готов!');
+    </script>
 </body>
 </html>

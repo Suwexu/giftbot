@@ -1,473 +1,326 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Открытие кейса</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
-        body {
-            background: linear-gradient(145deg, #0a0f1a 0%, #1a1a2e 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
-            color: white;
-            padding: 20px;
-            margin: 0;
-            overflow: hidden;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            padding: 25px 20px;
-            border-radius: 48px;
-            border: 1px solid rgba(255, 215, 0, 0.15);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 215, 0, 0.1);
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-        .title {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            background: linear-gradient(135deg, #f5af19, #f12711);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-transform: uppercase;
-        }
-        .balance-box {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 8px 16px;
-            border-radius: 100px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            font-size: 15px;
-            font-weight: 600;
-            color: #ffd700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .balance-box span {
-            color: #fff;
-            font-weight: 700;
-        }
-        .case-scene {
-            position: relative;
-            margin: 15px 0 30px 0;
-            perspective: 800px;
-        }
-        .case-box {
-            background: linear-gradient(145deg, #2a2a3e, #161622);
-            border-radius: 24px;
-            padding: 35px 20px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
-            position: relative;
-            transition: all 0.3s ease;
-            min-height: 260px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .case-box.opening {
-            animation: pulse 0.15s ease 4;
-            border-color: #ffd700;
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2), inset 0 0 40px rgba(255, 215, 0, 0.05);
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-        .case-image {
-            width: 110px;
-            height: 140px;
-            background: linear-gradient(145deg, #3d3d5c, #1e1e32);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 72px;
-            font-weight: 900;
-            color: #ffd700;
-            border: 2px solid #ffd700;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            margin-bottom: 20px;
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-        }
-        .case-image .lock-icon {
-            font-size: 32px;
-            opacity: 0.6;
-        }
-        .case-image .prize-label {
-            font-size: 28px;
-            font-weight: 800;
-            color: #fff;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-        }
-        .case-name {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            color: #b0b0c8;
-            text-transform: uppercase;
-        }
-        .case-name span {
-            color: #ffd700;
-        }
-        .result-box {
-            margin: 10px 0 20px 0;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .prize-win {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #f5af19, #f12711);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: winGlow 0.8s ease 3;
-        }
-        @keyframes winGlow {
-            0% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.7; }
-        }
-        .prize-common {
-            font-size: 24px;
-            font-weight: 600;
-            color: #b0b0c8;
-        }
-        .open-btn {
-            background: linear-gradient(145deg, #f5af19, #f12711);
-            border: none;
-            color: #fff;
-            font-weight: 800;
-            font-size: 20px;
-            letter-spacing: 2px;
-            padding: 18px 28px;
-            border-radius: 100px;
-            width: 100%;
-            max-width: 280px;
-            box-shadow: 0 8px 30px rgba(241, 39, 17, 0.3);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        .open-btn:active:not(:disabled) {
-            transform: scale(0.96);
-        }
-        .open-btn:disabled {
-            background: #3a3a4e;
-            color: #888;
-            box-shadow: none;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .open-btn .shine {
-            position: absolute;
-            top: -50%;
-            left: -60%;
-            width: 40%;
-            height: 200%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transform: rotate(25deg);
-            animation: shine 3s infinite;
-        }
-        @keyframes shine {
-            0% { left: -60%; }
-            100% { left: 120%; }
-        }
-        .timer-box {
-            font-size: 16px;
-            color: #ff6b6b;
-            font-weight: 600;
-            margin-top: 20px;
-            letter-spacing: 1px;
-        }
-        .footer-text {
-            margin-top: 25px;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.15);
-            letter-spacing: 1px;
-        }
-        @media (max-width: 480px) {
-            .container { padding: 20px 16px; }
-            .case-image { width: 90px; height: 120px; font-size: 56px; }
-            .case-image .prize-label { font-size: 22px; }
-            .result-box .prize-win { font-size: 24px; }
-            .result-box .prize-common { font-size: 20px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CyberX Gifts</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  background: linear-gradient(145deg,#0a0f1a 0%,#1a1a2e 100%);
+  min-height:100vh; color:#fff; padding:16px;
+  font-family:'Segoe UI',Roboto,system-ui,-apple-system,sans-serif;
+  display:flex; justify-content:center;
+}
+.container {
+  width:100%; max-width:420px; background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,215,0,.15); border-radius:32px; padding:20px 16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.8); align-self:flex-start;
+}
+.title {
+  text-align:center; font-size:18px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  background:linear-gradient(135deg,#f5af19,#f12711); -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:16px;
+}
+.tabs { display:flex; gap:8px; margin-bottom:18px; }
+.tab {
+  flex:1; padding:10px; border-radius:100px; border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.3); color:#b0b0c8; font-weight:600; font-size:14px; cursor:pointer;
+}
+.tab.active { background:linear-gradient(145deg,#f5af19,#f12711); color:#fff; border-color:transparent; }
+.view { display:none; }
+.view.active { display:block; }
+
+.case-box {
+  background:linear-gradient(145deg,#2a2a3e,#161622); border-radius:24px; padding:28px 16px;
+  border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 0 40px rgba(0,0,0,.6);
+  min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+}
+.case-box.opening { border-color:#ffd700; box-shadow:0 0 40px rgba(255,215,0,.2), inset 0 0 40px rgba(255,215,0,.05); }
+.case-img {
+  width:120px; height:120px; border-radius:20px; border:2px solid #ffd700; margin-bottom:16px;
+  background:linear-gradient(145deg,#3d3d5c,#1e1e32); display:flex; align-items:center; justify-content:center;
+  font-size:56px; overflow:hidden;
+}
+.case-img img { width:100%; height:100%; object-fit:cover; }
+.case-name { font-size:18px; font-weight:700; color:#fff; word-break:break-word; }
+.case-sub { margin-top:6px; font-size:13px; color:#b0b0c8; }
+.status { min-height:24px; margin:14px 0; text-align:center; font-size:15px; color:#b0b0c8; }
+.status.err { color:#ff6b6b; } .status.ok { color:#69db7c; }
+
+.open-btn {
+  display:block; width:100%; max-width:280px; margin:0 auto; padding:16px; border:none; border-radius:100px;
+  background:linear-gradient(145deg,#f5af19,#f12711); color:#fff; font-weight:800; font-size:18px;
+  letter-spacing:2px; text-transform:uppercase; cursor:pointer; box-shadow:0 8px 30px rgba(241,39,17,.3);
+  touch-action:manipulation;
+}
+.open-btn:active:not(:disabled) { transform:scale(.96); }
+.open-btn:disabled { background:#3a3a4e; color:#888; box-shadow:none; cursor:not-allowed; opacity:.7; }
+
+.prize-list { margin-top:20px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.chip { font-size:12px; padding:6px 10px; border-radius:100px; background:rgba(255,255,255,.06); color:#b0b0c8; }
+
+.vault-item {
+  display:flex; gap:12px; align-items:center; padding:12px; margin-bottom:10px; border-radius:18px;
+  background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.06);
+}
+.vault-thumb {
+  width:52px; height:52px; border-radius:12px; flex:none; overflow:hidden; font-size:26px;
+  background:linear-gradient(145deg,#3d3d5c,#1e1e32); display:flex; align-items:center; justify-content:center;
+}
+.vault-thumb img { width:100%; height:100%; object-fit:cover; }
+.vault-body { flex:1; min-width:0; }
+.vault-name { font-weight:700; font-size:15px; word-break:break-word; }
+.vault-state { font-size:13px; margin-top:3px; }
+.st-locked { color:#ffb347; } .st-unlocked { color:#69db7c; } .st-issued { color:#8a8aa5; }
+.empty { text-align:center; color:#8a8aa5; padding:30px 0; font-size:14px; }
+.footer { margin-top:20px; text-align:center; font-size:11px; color:rgba(255,255,255,.2); letter-spacing:1px; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="title">🎁 Cyber Case</div>
-            <div class="balance-box">💰 <span id="balanceDisplay">0</span></div>
-        </div>
+<div class="container">
+  <div class="title">🎁 CyberX Gifts</div>
 
-        <div class="case-scene">
-            <div class="case-box" id="caseBox">
-                <div class="case-image" id="caseImage">
-                    <span class="lock-icon" id="caseIcon">🔒</span>
-                </div>
-                <div class="case-name" id="caseName">НАЖМИ <span>ОТКРЫТЬ</span></div>
-            </div>
-        </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="prizes">Призы</button>
+    <button class="tab" data-tab="vault">Корзинка</button>
+  </div>
 
-        <div class="result-box" id="resultBox">
-            <span id="resultText" style="color:#666; font-size:16px; font-weight:500;">Готов к открытию</span>
-        </div>
-
-        <button class="open-btn" id="openBtn" disabled>
-            <span class="shine"></span>
-            <span id="btnText">⏳ ЗАГРУЗКА...</span>
-        </button>
-        <div id="timerDisplay" class="timer-box"></div>
-        <div class="footer-text">открытие кейсов cs2 style</div>
+  <div class="view active" id="view-prizes">
+    <div class="case-box" id="caseBox">
+      <div class="case-img" id="caseImg">🔒</div>
+      <div class="case-name" id="caseName">Открой кейс</div>
+      <div class="case-sub" id="caseSub">Приз попадёт в корзинку на 24 часа</div>
     </div>
+    <div class="status" id="status">⏳ Загрузка...</div>
+    <button class="open-btn" id="openBtn" disabled>Открыть</button>
+    <div class="prize-list" id="prizeList"></div>
+  </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+  <div class="view" id="view-vault">
+    <div id="vaultList"></div>
+  </div>
 
-        // Отключаем нативные кнопки Telegram, если они где-то включены
-        try {
-            tg.MainButton.hide();
-            tg.BackButton.hide();
-            if (tg.SecondaryButton) tg.SecondaryButton.hide();
-        } catch (e) {}
+  <div class="footer">CYBERX</div>
+</div>
 
-        console.log('🎁 Cyber Case загружен');
-        console.log('👤 User ID:', tg.initDataUnsafe?.user?.id || 'неизвестно');
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+const initData = tg ? tg.initData : '';
 
-        const prizes = [
-            { label: '★ 1000', value: 1000, color: '#f94144', rarity: 'legendary' },
-            { label: '★ 500', value: 500, color: '#f3722c', rarity: 'legendary' },
-            { label: '★ 200', value: 200, color: '#f8961e', rarity: 'epic' },
-            { label: '★ 100', value: 100, color: '#f9c74f', rarity: 'epic' },
-            { label: '50', value: 50, color: '#90be6d', rarity: 'rare' },
-            { label: '20', value: 20, color: '#577590', rarity: 'common' },
-            { label: '10', value: 10, color: '#9b5de5', rarity: 'common' },
-            { label: '5', value: 5, color: '#6c757d', rarity: 'common' }
-        ];
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status'), openBtn = $('openBtn'), caseBox = $('caseBox');
+const caseImg = $('caseImg'), caseName = $('caseName'), caseSub = $('caseSub');
 
-        const openBtn = document.getElementById('openBtn');
-        const btnText = document.getElementById('btnText');
-        const caseBox = document.getElementById('caseBox');
-        const caseImage = document.getElementById('caseImage');
-        const caseIcon = document.getElementById('caseIcon');
-        const caseName = document.getElementById('caseName');
-        const resultText = document.getElementById('resultText');
-        const balanceDisplay = document.getElementById('balanceDisplay');
-        const timerDisplay = document.getElementById('timerDisplay');
+let prizes = [];
+let vault = [];
+let busy = false;
+let vaultTimer = null;
 
-        let canOpen = false;
-        let isOpening = false;
-        let timerInterval = null;
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = 'status' + (kind ? ' ' + kind : '');
+}
 
-        function updateBalance(balance) {
-            balanceDisplay.textContent = balance;
-        }
+// Запрос к серверу. Render на бесплатном тарифе может «просыпаться» до минуты,
+// поэтому таймаут большой.
+async function api(path, body) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 70000);
+  try {
+    const opts = { signal: ctrl.signal };
+    if (body !== undefined) {
+      opts.method = 'POST';
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify(Object.assign({ initData }, body));
+    }
+    const r = await fetch(path, opts);
+    let data = null;
+    try { data = await r.json(); } catch (e) {}
+    if (!r.ok || !data || !data.ok) {
+      throw new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+    }
+    return data;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
-        function updateTimer(seconds) {
-            if (seconds <= 0) {
-                timerDisplay.textContent = '';
-                return;
-            }
-            const hours = Math.floor(seconds/3600);
-            const mins = Math.floor((seconds%3600)/60);
-            const secs = seconds%60;
-            timerDisplay.textContent = `⏳ ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-        }
+function imgOrEmoji(el, url, emoji) {
+  el.textContent = '';
+  if (url) {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    img.onerror = () => { el.textContent = emoji; };
+    el.appendChild(img);
+  } else {
+    el.textContent = emoji;
+  }
+}
 
-        function setStatus(text, isError = false, isSuccess = false) {
-            resultText.textContent = text;
-            resultText.style.color = isError ? '#ff6b6b' : isSuccess ? '#69db7c' : '#b0b0c8';
-        }
+function parseUtc(s) {
+  return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : s + 'Z');
+}
 
-        function setCaseState(state) {
-            if (state === 'locked') {
-                caseBox.classList.remove('opening');
-                caseIcon.textContent = '🔒';
-                caseName.innerHTML = 'НАЖМИ <span>ОТКРЫТЬ</span>';
-            } else if (state === 'opening') {
-                caseBox.classList.add('opening');
-                caseIcon.textContent = '🌀';
-                caseName.innerHTML = 'ОТКРЫТИЕ <span>...</span>';
-            } else if (state === 'result') {
-                caseBox.classList.remove('opening');
-            }
-        }
+function fmtLeft(sec) {
+  sec = Math.max(0, sec);
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+}
 
-        function sendToBot(data) {
-            try {
-                tg.sendData(data);
-                console.log('📤 Отправлено:', data);
-                return true;
-            } catch (e) {
-                console.error('❌ Ошибка отправки:', e);
-                return false;
-            }
-        }
+// ---------- Призы ----------
+function renderPrizes() {
+  const box = $('prizeList');
+  box.textContent = '';
+  prizes.forEach(p => {
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.textContent = p.name;
+    box.appendChild(c);
+  });
+}
 
-        function checkStatus() {
-            setStatus('⏳ Проверка...');
-            openBtn.disabled = true;
-            btnText.textContent = '⏳ ЗАГРУЗКА...';
-            sendToBot('get_status');
-        }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-        function openCase() {
-            if (isOpening || !canOpen) return;
-            isOpening = true;
-            canOpen = false;
-            openBtn.disabled = true;
-            btnText.textContent = '🌀 ОТКРЫТИЕ...';
+async function openCase() {
+  if (busy) return;
+  busy = true;
+  openBtn.disabled = true;
+  setStatus('🎲 Открываем...');
+  caseBox.classList.add('opening');
 
-            setCaseState('opening');
-            setStatus('🎲 Выпадает приз...');
+  let result;
+  try {
+    // запрос к серверу идёт параллельно с анимацией
+    const req = api('/api/spin', {});
+    for (let i = 0; i < 14; i++) {
+      const p = prizes[Math.floor(Math.random() * prizes.length)];
+      if (p) { imgOrEmoji(caseImg, p.image_url, '🎁'); caseName.textContent = p.name; }
+      await sleep(110);
+    }
+    result = (await req).prize;
+  } catch (e) {
+    caseBox.classList.remove('opening');
+    imgOrEmoji(caseImg, '', '🔒');
+    caseName.textContent = 'Открой кейс';
+    setStatus('❌ ' + e.message, 'err');
+    busy = false;
+    openBtn.disabled = false;
+    return;
+  }
 
-            const prize = prizes[Math.floor(Math.random() * prizes.length)];
+  caseBox.classList.remove('opening');
+  imgOrEmoji(caseImg, result.prize_image, '🎉');
+  caseName.textContent = result.prize_name;
+  caseSub.textContent = 'Лежит в корзинке, забрать можно через 24 часа';
+  setStatus('🎉 Вы выиграли приз!', 'ok');
+  try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
 
-            let count = 0;
-            const maxCount = 20;
-            const interval = setInterval(() => {
-                const randomPrize = prizes[Math.floor(Math.random() * prizes.length)];
-                caseIcon.textContent = randomPrize.label;
-                caseImage.style.transform = `scale(${1 + Math.random() * 0.2})`;
-                caseImage.style.borderColor = randomPrize.color;
+  await loadVault();
+  busy = false;
+  openBtn.disabled = false;
+  openBtn.textContent = 'Открыть ещё';
+}
 
-                count++;
-                if (count >= maxCount) {
-                    clearInterval(interval);
-                    caseIcon.textContent = prize.label;
-                    caseImage.style.transform = 'scale(1)';
-                    caseImage.style.borderColor = prize.color;
-                    caseName.innerHTML = `ВЫИГРАНО <span>${prize.label}</span>`;
-                    setStatus(`🎉 Выиграно ${prize.label} монет!`, false, true);
+// ---------- Корзинка ----------
+function renderVault() {
+  const list = $('vaultList');
+  list.textContent = '';
+  if (!vault.length) {
+    const d = document.createElement('div');
+    d.className = 'empty';
+    d.textContent = 'Пока пусто. Открой кейс!';
+    list.appendChild(d);
+    return;
+  }
+  vault.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'vault-item';
+    const th = document.createElement('div'); th.className = 'vault-thumb';
+    imgOrEmoji(th, it.prize_image, '🎁');
+    const body = document.createElement('div'); body.className = 'vault-body';
+    const nm = document.createElement('div'); nm.className = 'vault-name'; nm.textContent = it.prize_name;
+    const st = document.createElement('div'); st.className = 'vault-state';
+    st.dataset.unlock = it.unlock_at;
+    st.dataset.status = it.display_status;
+    body.appendChild(nm); body.appendChild(st);
+    row.appendChild(th); row.appendChild(body);
+    list.appendChild(row);
+  });
+  tickVault();
+}
 
-                    const data = 'spin_result:' + JSON.stringify({
-                        prize_id: prizes.indexOf(prize),
-                        prize_name: prize.label,
-                        value: prize.value
-                    });
-                    sendToBot(data);
+function tickVault() {
+  const now = Date.now();
+  document.querySelectorAll('.vault-state').forEach(el => {
+    const status = el.dataset.status;
+    if (status === 'issued') {
+      el.className = 'vault-state st-issued';
+      el.textContent = '✅ Выдан';
+      return;
+    }
+    const left = Math.ceil((parseUtc(el.dataset.unlock).getTime() - now) / 1000);
+    if (left > 0) {
+      el.className = 'vault-state st-locked';
+      el.textContent = '🔒 Откроется через ' + fmtLeft(left);
+    } else {
+      el.className = 'vault-state st-unlocked';
+      el.textContent = '🔓 Можно забрать на ресепшене';
+    }
+  });
+}
 
-                    isOpening = false;
-                    openBtn.disabled = true;
-                    btnText.textContent = '⏳ ОЖИДАНИЕ...';
-                    setCaseState('result');
+async function loadVault() {
+  try {
+    vault = (await api('/api/vault', {})).items || [];
+    renderVault();
+  } catch (e) {
+    $('vaultList').textContent = '';
+    const d = document.createElement('div');
+    d.className = 'empty';
+    d.textContent = '❌ ' + e.message;
+    $('vaultList').appendChild(d);
+  }
+}
 
-                    setTimeout(() => {
-                        checkStatus();
-                    }, 3000);
-                }
-            }, 150);
-        }
+// ---------- Вкладки ----------
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + btn.dataset.tab));
+    if (btn.dataset.tab === 'vault') loadVault();
+  });
+});
+openBtn.addEventListener('click', openCase);
 
-        tg.onEvent('message', (event) => {
-            console.log('📨 Ответ от бота:', event.data);
-
-            try {
-                const data = JSON.parse(event.data);
-                console.log('📊 Парсинг:', data);
-
-                if (data.status === 'can_spin') {
-                    canOpen = true;
-                    openBtn.disabled = false;
-                    btnText.textContent = '🔓 ОТКРЫТЬ КЕЙС';
-                    setStatus('🎯 Нажми "Открыть кейс"');
-                    timerDisplay.textContent = '';
-                    if (data.balance !== undefined) updateBalance(data.balance);
-                    setCaseState('locked');
-
-                } else if (data.status === 'wait') {
-                    canOpen = false;
-                    openBtn.disabled = true;
-                    btnText.textContent = '⏳ ОЖИДАНИЕ';
-                    setStatus(`⏳ Кулдаун: ${data.wait_time} сек`);
-                    updateTimer(data.wait_time);
-                    if (data.balance !== undefined) updateBalance(data.balance);
-                    setCaseState('locked');
-
-                    if (timerInterval) clearInterval(timerInterval);
-                    let remaining = data.wait_time;
-                    timerInterval = setInterval(() => {
-                        remaining--;
-                        updateTimer(remaining);
-                        if (remaining <= 0) {
-                            clearInterval(timerInterval);
-                            timerInterval = null;
-                            checkStatus();
-                        }
-                    }, 1000);
-
-                } else if (data.status === 'success') {
-                    setStatus(`🎉 Выиграно ${data.prize} монет!`, false, true);
-                    if (data.new_balance !== undefined) updateBalance(data.new_balance);
-                    setCaseState('result');
-                    caseIcon.textContent = data.prize;
-                    caseName.innerHTML = `ВЫИГРАНО <span>${data.prize}</span>`;
-                    try {
-                        tg.showPopup({
-                            title: '🎉 Открытие кейса!',
-                            message: `Вы выиграли ${data.value} монет!`,
-                            buttons: [{ type: 'ok' }]
-                        });
-                    } catch(e) {}
-
-                } else if (data.error) {
-                    setStatus(`❌ ${data.error}`, true);
-                    openBtn.disabled = true;
-                    btnText.textContent = '⚠️ ОШИБКА';
-                }
-
-            } catch (e) {
-                console.error('❌ Ошибка парсинга:', e);
-                setStatus('📨 Ошибка ответа', true);
-            }
-        });
-
-        openBtn.addEventListener('click', openCase);
-
-        setCaseState('locked');
-        setStatus('⏳ Загрузка...');
-        openBtn.disabled = true;
-        btnText.textContent = '⏳ ЗАГРУЗКА...';
-
-        setTimeout(checkStatus, 500);
-
-        console.log('✅ Cyber Case готов!');
-    </script>
+// ---------- Старт ----------
+async function boot() {
+  if (!initData) {
+    setStatus('❌ Откройте приложение через бота в Telegram', 'err');
+    return;
+  }
+  setStatus('⏳ Подключаемся к серверу (может занять до минуты)...');
+  try {
+    await api('/api/verify', {});
+    prizes = (await api('/api/prizes')).prizes || [];
+    renderPrizes();
+    if (!prizes.length) {
+      setStatus('Призов пока нет. Загляните позже.', 'err');
+    } else {
+      setStatus('🎯 Нажмите «Открыть»');
+      openBtn.textContent = 'Открыть';
+      openBtn.disabled = false;
+    }
+    loadVault();
+    vaultTimer = setInterval(tickVault, 1000);
+  } catch (e) {
+    setStatus('❌ ' + e.message, 'err');
+  }
+}
+boot();
+</script>
 </body>
 </html>

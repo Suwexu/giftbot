@@ -2,133 +2,257 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>CyberX Gifts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
+:root {
+  --bg:#050405; --panel:#0f0a0c; --panel2:#190a11; --line:rgba(255,61,127,.3);
+  --pink:#ff3d7f; --coral:#e5453a; --rose:#f0508a; --blush:#fde6ef;
+  --text:#f6eff2; --muted:#9d8a93; --ok:#37f2a0; --warn:#ffb020; --bad:#ff5470;
+  --grad:linear-gradient(90deg,#e5453a 0%,#f0508a 58%,#fde6ef 100%);
+}
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { background:var(--bg); }
 body {
-  background: linear-gradient(145deg,#0a0f1a 0%,#1a1a2e 100%);
-  min-height:100vh; color:#fff; padding:16px;
-  font-family:'Segoe UI',Roboto,system-ui,-apple-system,sans-serif;
-  display:flex; justify-content:center;
+  min-height:100vh; color:var(--text); font-family:'Montserrat',system-ui,sans-serif;
+  padding:calc(14px + env(safe-area-inset-top)) 14px calc(26px + env(safe-area-inset-bottom));
+  display:flex; justify-content:center; position:relative; overflow-x:hidden;
 }
-.container {
-  width:100%; max-width:420px; background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,215,0,.15); border-radius:32px; padding:20px 16px;
-  box-shadow:0 20px 60px rgba(0,0,0,.8); align-self:flex-start;
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:radial-gradient(700px 360px at 50% -120px, rgba(255,61,127,.28), transparent 70%);
 }
-.title {
-  text-align:center; font-size:18px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
-  background:linear-gradient(135deg,#f5af19,#f12711); -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:16px;
+.app { position:relative; z-index:1; width:100%; max-width:440px; }
+.circuit { position:absolute; top:-4px; left:0; width:100%; height:200px; z-index:0; pointer-events:none; opacity:.8; -webkit-mask-image:linear-gradient(#000 55%,transparent 100%); mask-image:linear-gradient(#000 55%,transparent 100%); }
+.circuit * { fill:none; stroke:var(--pink); stroke-width:1.2; }
+.circuit .f { fill:var(--pink); stroke:none; }
+
+/* логотип */
+.brand { position:relative; z-index:1; text-align:center; margin:6px 0 16px; }
+.brand-main { position:relative; display:inline-block; padding:4px 8px; }
+.brand-main .bx { position:absolute; left:50%; top:50%; height:150%; width:auto; transform:translate(-50%,-50%); z-index:0; filter:drop-shadow(0 0 14px rgba(229,69,58,.55)); }
+.brand-main .cy {
+  position:relative; z-index:1; font:900 34px 'Orbitron',sans-serif; letter-spacing:2px; color:#fff;
+  transform:skewX(-8deg); display:inline-block; text-shadow:0 2px 0 rgba(0,0,0,.45);
 }
-.tabs { display:flex; gap:8px; margin-bottom:18px; }
+.brand-tag {
+  position:relative; z-index:1; display:inline-block; margin-top:-4px; padding:3px 18px; background:#fff; color:#0a0507;
+  font:800 13px 'Montserrat',sans-serif; letter-spacing:4px; transform:skewX(-10deg) rotate(-1deg);
+}
+
+/* вкладки */
+.tabs { position:relative; z-index:1; display:flex; gap:8px; margin-bottom:14px; }
 .tab {
-  flex:1; padding:10px; border-radius:100px; border:1px solid rgba(255,255,255,.08);
-  background:rgba(0,0,0,.3); color:#b0b0c8; font-weight:600; font-size:14px; cursor:pointer;
+  flex:1; padding:12px 8px; border:1px solid var(--line); border-radius:999px; background:var(--panel);
+  color:var(--muted); font:700 12px 'Montserrat',sans-serif; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; position:relative;
 }
-.tab.active { background:linear-gradient(145deg,#f5af19,#f12711); color:#fff; border-color:transparent; }
-.view { display:none; }
-.view.active { display:block; }
+.tab.active { color:#fff; border-color:transparent; background:var(--grad); box-shadow:0 6px 22px rgba(240,80,138,.35); }
+.badge { position:absolute; top:-7px; right:-3px; min-width:20px; height:20px; padding:0 5px; border-radius:10px; background:#fff; color:#c01a4c; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(255,61,127,.8); }
+.badge[hidden] { display:none; }
+.view { position:relative; z-index:1; display:none; } .view.active { display:block; }
 
-.case-box {
-  background:linear-gradient(145deg,#2a2a3e,#161622); border-radius:24px; padding:28px 16px;
-  border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 0 40px rgba(0,0,0,.6);
-  min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+/* блок с колесом */
+.hero {
+  position:relative; overflow:hidden; border-radius:28px; padding:26px 22px 62px;
+  border:1px solid var(--line);
+  background:radial-gradient(ellipse at 50% 38%, rgba(255,61,127,.55), rgba(229,69,58,.16) 48%, #060304 78%);
 }
-.case-box.opening { border-color:#ffd700; box-shadow:0 0 40px rgba(255,215,0,.2), inset 0 0 40px rgba(255,215,0,.05); }
-.case-img {
-  width:120px; height:120px; border-radius:20px; border:2px solid #ffd700; margin-bottom:16px;
-  background:linear-gradient(145deg,#3d3d5c,#1e1e32); display:flex; align-items:center; justify-content:center;
-  font-size:56px; overflow:hidden;
+.halo {
+  position:absolute; left:50%; top:46%; width:92%; aspect-ratio:1; transform:translate(-50%,-50%);
+  border:2px solid rgba(255,61,127,.8); border-radius:50%; box-shadow:0 0 40px rgba(255,61,127,.4), inset 0 0 50px rgba(255,61,127,.25); pointer-events:none;
 }
-.case-img img { width:100%; height:100%; object-fit:cover; }
-.case-name { font-size:18px; font-weight:700; color:#fff; word-break:break-word; }
-.case-sub { margin-top:6px; font-size:13px; color:#b0b0c8; }
-.status { min-height:24px; margin:14px 0; text-align:center; font-size:15px; color:#b0b0c8; }
-.status.err { color:#ff6b6b; } .status.ok { color:#69db7c; }
+.skyline { position:absolute; left:0; right:0; bottom:0; width:100%; height:64px; z-index:1; pointer-events:none; }
+.wheel-wrap { position:relative; z-index:2; width:100%; max-width:300px; aspect-ratio:1; margin:0 auto; }
+.wheel-ring {
+  position:absolute; inset:-7px; border-radius:50%;
+  background:conic-gradient(from 0deg,#e5453a,#ff3d7f,#fde6ef,#ff3d7f,#e5453a);
+  box-shadow:0 0 36px rgba(255,61,127,.55);
+}
+.wheel-ring::after { content:''; position:absolute; inset:5px; border-radius:50%; background:#050304; }
+#wheel { position:absolute; inset:0; width:100%; height:100%; border-radius:50%; will-change:transform; }
+.pointer {
+  position:absolute; top:-20px; left:50%; width:0; height:0; z-index:4; transform:translateX(-50%);
+  border-left:13px solid transparent; border-right:13px solid transparent; border-top:26px solid var(--blush);
+  filter:drop-shadow(0 0 8px var(--pink));
+}
+.hub {
+  position:absolute; z-index:3; top:50%; left:50%; width:60px; height:60px; transform:translate(-50%,-50%); border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#2a0f18,#060304); border:2px solid var(--pink);
+  box-shadow:0 0 22px rgba(255,61,127,.6); display:flex; align-items:center; justify-content:center;
+}
+.hub svg { width:30px; height:30px; }
 
-.open-btn {
-  display:block; width:100%; max-width:280px; margin:0 auto; padding:16px; border:none; border-radius:100px;
-  background:linear-gradient(145deg,#f5af19,#f12711); color:#fff; font-weight:800; font-size:18px;
-  letter-spacing:2px; text-transform:uppercase; cursor:pointer; box-shadow:0 8px 30px rgba(241,39,17,.3);
-  touch-action:manipulation;
-}
-.open-btn:active:not(:disabled) { transform:scale(.96); }
-.open-btn:disabled { background:#3a3a4e; color:#888; box-shadow:none; cursor:not-allowed; opacity:.7; }
+.status { min-height:22px; margin:18px 0 12px; text-align:center; font-size:13px; color:var(--muted); font-weight:500; }
+.status.err { color:var(--bad); } .status.ok { color:var(--ok); }
 
-.prize-list { margin-top:20px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
-.chip { font-size:12px; padding:6px 10px; border-radius:100px; background:rgba(255,255,255,.06); color:#b0b0c8; }
+.btn {
+  display:block; width:100%; padding:15px 20px; border:none; border-radius:999px; cursor:pointer;
+  font:700 16px 'Montserrat',sans-serif; color:#fff; background:var(--grad);
+  box-shadow:0 10px 30px rgba(240,80,138,.35); touch-action:manipulation; transition:transform .1s;
+}
+.btn.go { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; }
+.btn.go::after { content:'→'; font-size:22px; font-weight:500; color:#1a0710; }
+.btn:active:not(:disabled) { transform:scale(.97); }
+.btn:disabled { background:var(--panel2); color:var(--muted); box-shadow:none; cursor:not-allowed; border:1px solid var(--line); }
+.btn:disabled.go::after { color:var(--muted); }
+.btn.ghost { background:transparent; color:#fff; border:1.5px solid var(--pink); box-shadow:none; }
+.btn.ghost.go::after { color:var(--pink); }
+.btn.small { padding:12px; font-size:13px; margin-top:10px; text-align:center; }
 
-.vault-item {
-  display:flex; gap:12px; align-items:center; padding:12px; margin-bottom:10px; border-radius:18px;
-  background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.06);
+.notice {
+  margin-top:16px; padding:12px 14px; border-radius:14px; font-size:12.5px; line-height:1.5; font-weight:500;
+  background:rgba(255,176,32,.08); border:1px solid rgba(255,176,32,.45); color:#ffd37a;
 }
-.vault-thumb {
-  width:52px; height:52px; border-radius:12px; flex:none; overflow:hidden; font-size:26px;
-  background:linear-gradient(145deg,#3d3d5c,#1e1e32); display:flex; align-items:center; justify-content:center;
+.notice b { color:#fff; font-weight:700; }
+
+/* призы */
+.card { display:flex; gap:12px; align-items:center; padding:12px; margin-top:12px; border-radius:18px; background:var(--panel); border:1px solid var(--line); }
+.thumb {
+  width:64px; height:64px; flex:none; border-radius:14px; overflow:hidden; font-size:30px;
+  background:linear-gradient(145deg,#2a0f18,#0a0507); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
 }
-.vault-thumb img { width:100%; height:100%; object-fit:cover; }
-.vault-body { flex:1; min-width:0; }
-.vault-name { font-weight:700; font-size:15px; word-break:break-word; }
-.vault-state { font-size:13px; margin-top:3px; }
-.st-locked { color:#ffb347; } .st-unlocked { color:#69db7c; } .st-issued { color:#8a8aa5; }
-.empty { text-align:center; color:#8a8aa5; padding:30px 0; font-size:14px; }
-.footer { margin-top:20px; text-align:center; font-size:11px; color:rgba(255,255,255,.2); letter-spacing:1px; }
+.thumb img { width:100%; height:100%; object-fit:cover; }
+.card-body { flex:1; min-width:0; }
+.card-name { font-weight:700; font-size:16px; word-break:break-word; }
+.card-meta { font-size:11.5px; color:var(--muted); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+.st { display:inline-block; margin-top:6px; font-size:12px; font-weight:600; }
+.st.ready { color:var(--ok); } .st.issued { color:var(--muted); }
+.empty { text-align:center; color:var(--muted); padding:34px 0; font-size:14px; }
+.club { position:relative; z-index:1; margin-top:22px; }
+
+/* окна */
+.overlay { position:fixed; inset:0; z-index:20; background:rgba(3,1,2,.88); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:18px; overflow-y:auto; }
+.overlay.show { display:flex; }
+.modal {
+  width:100%; max-width:380px; text-align:center; padding:22px 18px; border-radius:26px;
+  background:radial-gradient(ellipse at 50% 0%, rgba(255,61,127,.3), var(--panel) 62%); border:1px solid var(--pink);
+  box-shadow:0 0 50px rgba(255,61,127,.35);
+}
+.modal h2 { font:800 17px 'Montserrat',sans-serif; letter-spacing:3px; color:#fff; text-transform:uppercase; }
+.big-thumb {
+  width:150px; height:150px; margin:16px auto 10px; border-radius:22px; overflow:hidden; font-size:70px;
+  background:linear-gradient(145deg,#2a0f18,#0a0507); border:2px solid var(--pink); box-shadow:0 0 34px rgba(255,61,127,.5);
+  display:flex; align-items:center; justify-content:center;
+}
+.big-thumb img { width:100%; height:100%; object-fit:cover; }
+.prize-title { font:800 22px 'Montserrat',sans-serif; word-break:break-word; margin-bottom:6px; }
+.kv { text-align:left; margin-top:12px; padding:10px 12px; border-radius:12px; background:rgba(0,0,0,.45); font:500 12px 'JetBrains Mono',monospace; color:#d9c6cf; line-height:1.7; }
+.kv span { color:var(--muted); }
+.clock { color:var(--pink); font-size:16px; }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="title">🎁 CyberX Gifts</div>
+<div class="app">
+  <svg class="circuit" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="0,70 70,70 110,30 110,0"/><polyline points="0,110 40,110 70,140 70,200"/>
+    <polyline points="440,60 370,60 330,100 330,200"/><polyline points="440,20 400,20 380,0"/>
+    <rect class="f" x="400" y="100" width="14" height="3"/><rect class="f" x="400" y="108" width="14" height="3"/><rect class="f" x="400" y="116" width="14" height="3"/>
+    <rect class="f" x="24" y="150" width="14" height="3"/><rect class="f" x="24" y="158" width="14" height="3"/>
+  </svg>
+  <header class="brand">
+    <div class="brand-main"><svg class="bx" viewBox="0 0 100 100" aria-hidden="true"><path fill="#e5432d" d="M6 8 L28 3 L96 90 L74 97 Z"/><path fill="#e5432d" d="M72 3 L96 9 L30 97 L5 91 Z"/></svg><span class="cy">CYBER</span></div><br>
+    <div class="brand-tag">GIFTS</div>
+  </header>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="prizes">Призы</button>
-    <button class="tab" data-tab="vault">Корзинка</button>
-  </div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="wheel">Колесо</button>
+    <button class="tab" data-tab="vault">Мои призы<span class="badge" id="badge" hidden>0</span></button>
+  </nav>
 
-  <div class="view active" id="view-prizes">
-    <div class="case-box" id="caseBox">
-      <div class="case-img" id="caseImg">🔒</div>
-      <div class="case-name" id="caseName">Открой кейс</div>
-      <div class="case-sub" id="caseSub">Приз попадёт в корзинку на 24 часа</div>
+  <section class="view active" id="view-wheel">
+    <div class="hero">
+      <div class="halo"></div>
+      <div class="wheel-wrap">
+        <div class="wheel-ring"></div>
+        <div class="pointer"></div>
+        <canvas id="wheel"></canvas>
+        <div class="hub"><svg viewBox="0 0 100 100"><path fill="#e5432d" d="M6 8 L28 3 L96 90 L74 97 Z"/><path fill="#e5432d" d="M72 3 L96 9 L30 97 L5 91 Z"/></svg></div>
+      </div>
+      <svg class="skyline" viewBox="0 0 418 70" preserveAspectRatio="none" aria-hidden="true"><g fill="#050304"><rect x="0" y="40" width="22" height="30"/><rect x="22" y="22" width="16" height="48"/><rect x="38" y="34" width="26" height="36"/><rect x="64" y="12" width="14" height="58"/><rect x="78" y="30" width="24" height="40"/><rect x="102" y="18" width="18" height="52"/><rect x="120" y="36" width="30" height="34"/><rect x="150" y="10" width="16" height="60"/><rect x="166" y="28" width="26" height="42"/><rect x="192" y="16" width="20" height="54"/><rect x="212" y="38" width="28" height="32"/><rect x="240" y="20" width="18" height="50"/><rect x="258" y="32" width="24" height="38"/><rect x="282" y="12" width="16" height="58"/><rect x="298" y="30" width="28" height="40"/><rect x="326" y="18" width="20" height="52"/><rect x="346" y="36" width="26" height="34"/><rect x="372" y="24" width="16" height="46"/><rect x="388" y="34" width="30" height="36"/><rect x="0" y="62" width="418" height="8"/></g></svg>
     </div>
     <div class="status" id="status">⏳ Загрузка...</div>
-    <button class="open-btn" id="openBtn" disabled>Открыть</button>
-    <div class="prize-list" id="prizeList"></div>
-  </div>
+    <button class="btn go" id="spinBtn" disabled>Крутить колесо</button>
+    <div class="notice">⚠️ <b>Выигранный приз нужно показать администратору.</b> Он сфотографирует твой приз — без этого приз не выдаётся.</div>
+  </section>
 
-  <div class="view" id="view-vault">
+  <section class="view" id="view-vault">
+    <div class="notice" style="margin-top:0">⚠️ Чтобы получить приз, нажми «Показать администратору». <b>Администратор должен сфотографировать экран</b> с призом перед выдачей.</div>
     <div id="vaultList"></div>
-  </div>
+  </section>
 
-  <div class="footer">CYBERX</div>
+  <button class="btn ghost go club" id="clubBtn">Наш клуб</button>
+</div>
+
+<!-- результат вращения -->
+<div class="overlay" id="resultOv">
+  <div class="modal">
+    <h2>Ты выиграл!</h2>
+    <div class="big-thumb" id="resThumb">🎁</div>
+    <div class="prize-title" id="resName"></div>
+    <div class="notice" style="text-align:left">⚠️ <b>Покажи этот приз администратору.</b> Он должен сфотографировать его — только после этого приз выдадут.</div>
+    <button class="btn small" id="resShow">Показать администратору</button>
+    <button class="btn ghost small" id="resClose">Позже</button>
+  </div>
+</div>
+
+<!-- экран для администратора -->
+<div class="overlay" id="ticketOv">
+  <div class="modal">
+    <h2>Приз для выдачи</h2>
+    <div class="big-thumb" id="tkThumb">🎁</div>
+    <div class="prize-title" id="tkName"></div>
+    <div class="kv" id="tkInfo"></div>
+    <div class="notice" style="text-align:left">📸 <b>Администратор:</b> сфотографируйте этот экран перед выдачей приза.</div>
+    <button class="btn ghost small" id="tkClose">Закрыть</button>
+  </div>
 </div>
 
 <script>
+const CLUB_URL = 'https://t.me/CyberxMoskovskay';
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
 const initData = tg ? tg.initData : '';
+const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || {};
 
 const $ = (id) => document.getElementById(id);
-const statusEl = $('status'), openBtn = $('openBtn'), caseBox = $('caseBox');
-const caseImg = $('caseImg'), caseName = $('caseName'), caseSub = $('caseSub');
+const statusEl = $('status'), spinBtn = $('spinBtn');
+const canvas = $('wheel'), ctx = canvas.getContext('2d');
 
-let prizes = [];
-let vault = [];
-let busy = false;
-let vaultTimer = null;
+let prizes = [], vault = [], images = {};
+let rot = 0, spinning = false, nextSpinAt = 0, ready = false;
 
-function setStatus(text, kind) {
-  statusEl.textContent = text;
-  statusEl.className = 'status' + (kind ? ' ' + kind : '');
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function setStatus(t, kind) { statusEl.textContent = t; statusEl.className = 'status' + (kind ? ' ' + kind : ''); }
+function safeUrl(u) { return typeof u === 'string' && /^(https?:\/\/|data:image\/)/i.test(u) ? u : ''; }
+function parseUtc(s) { return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : s + 'Z'); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtLeft(sec) { sec = Math.max(0, sec); return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor(sec % 3600 / 60)) + ':' + pad(sec % 60); }
+function fmtDate(d) { return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+
+function openClub() {
+  try { if (tg && tg.openTelegramLink) { tg.openTelegramLink(CLUB_URL); return; } } catch (e) {}
+  window.open(CLUB_URL, '_blank');
 }
 
-// Запрос к серверу. Render на бесплатном тарифе может «просыпаться» до минуты,
-// поэтому таймаут большой.
+function setThumb(el, url, emoji) {
+  el.textContent = '';
+  url = safeUrl(url);
+  if (!url) { el.textContent = emoji; return; }
+  const img = document.createElement('img');
+  img.alt = '';
+  img.onerror = () => { el.textContent = emoji; };
+  img.src = url;
+  el.appendChild(img);
+}
+
+// ---------- сервер ----------
 async function api(path, body) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 70000);
+  const t = setTimeout(() => ctrl.abort(), 70000); // Render может «просыпаться» до минуты
   try {
     const opts = { signal: ctrl.signal };
     if (body !== undefined) {
@@ -140,185 +264,232 @@ async function api(path, body) {
     let data = null;
     try { data = await r.json(); } catch (e) {}
     if (!r.ok || !data || !data.ok) {
-      throw new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+      const err = new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+      err.data = data;
+      throw err;
     }
     return data;
-  } finally {
-    clearTimeout(t);
-  }
+  } finally { clearTimeout(t); }
 }
 
-function imgOrEmoji(el, url, emoji) {
-  el.textContent = '';
-  if (url) {
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = '';
-    img.onerror = () => { el.textContent = emoji; };
-    el.appendChild(img);
-  } else {
-    el.textContent = emoji;
-  }
-}
+// ---------- колесо ----------
+const SEG_COLORS = ['#130609', '#220b14', '#1a0810'];
 
-function parseUtc(s) {
-  return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : s + 'Z');
-}
-
-function fmtLeft(sec) {
-  sec = Math.max(0, sec);
-  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-  return [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
-}
-
-// ---------- Призы ----------
-function renderPrizes() {
-  const box = $('prizeList');
-  box.textContent = '';
+function loadImages() {
   prizes.forEach(p => {
-    const c = document.createElement('span');
-    c.className = 'chip';
-    c.textContent = p.name;
-    box.appendChild(c);
+    const u = safeUrl(p.image_url);
+    if (!u || images[p.id]) return;
+    const img = new Image();
+    img.onload = () => { images[p.id] = img; drawWheel(); };
+    img.src = u;
   });
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function drawWheel() {
+  const size = canvas.clientWidth || 300;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = canvas.height = Math.round(size * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  const c = size / 2, R = c - 2, n = prizes.length;
 
-async function openCase() {
-  if (busy) return;
-  busy = true;
-  openBtn.disabled = true;
-  setStatus('🎲 Открываем...');
-  caseBox.classList.add('opening');
-
-  let result;
-  try {
-    // запрос к серверу идёт параллельно с анимацией
-    const req = api('/api/spin', {});
-    for (let i = 0; i < 14; i++) {
-      const p = prizes[Math.floor(Math.random() * prizes.length)];
-      if (p) { imgOrEmoji(caseImg, p.image_url, '🎁'); caseName.textContent = p.name; }
-      await sleep(110);
-    }
-    result = (await req).prize;
-  } catch (e) {
-    caseBox.classList.remove('opening');
-    imgOrEmoji(caseImg, '', '🔒');
-    caseName.textContent = 'Открой кейс';
-    setStatus('❌ ' + e.message, 'err');
-    busy = false;
-    openBtn.disabled = false;
+  if (!n) {
+    ctx.fillStyle = '#130609'; ctx.beginPath(); ctx.arc(c, c, R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9d8a93'; ctx.font = '600 15px Montserrat, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Призов пока нет', c, c + 80);
     return;
   }
+  const seg = Math.PI * 2 / n;
+  for (let i = 0; i < n; i++) {
+    const a0 = -Math.PI / 2 + i * seg, a1 = a0 + seg, mid = a0 + seg / 2;
+    let col = SEG_COLORS[i % 2];
+    if (n % 2 === 1 && i === n - 1 && n > 1) col = SEG_COLORS[2];
+    ctx.beginPath(); ctx.moveTo(c, c); ctx.arc(c, c, R, a0, a1); ctx.closePath();
+    ctx.fillStyle = col; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,61,127,.55)'; ctx.lineWidth = 1.5; ctx.stroke();
 
-  caseBox.classList.remove('opening');
-  imgOrEmoji(caseImg, result.prize_image, '🎉');
-  caseName.textContent = result.prize_name;
-  caseSub.textContent = 'Лежит в корзинке, забрать можно через 24 часа';
-  setStatus('🎉 Вы выиграли приз!', 'ok');
-  try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+    // название вдоль луча
+    ctx.save(); ctx.translate(c, c); ctx.rotate(mid);
+    ctx.fillStyle = '#fff6fa'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const fs = n > 8 ? 11 : 13;
+    ctx.font = '700 ' + fs + 'px Montserrat, sans-serif';
+    let label = String(prizes[i].name || ''), maxW = R * 0.36;
+    while (label.length > 1 && ctx.measureText(label).width > maxW) label = label.slice(0, -1);
+    if (label !== prizes[i].name) label = label.replace(/\s*$/, '') + '…';
+    ctx.fillText(label, R * 0.30, 0);
+    ctx.restore();
 
-  await loadVault();
-  busy = false;
-  openBtn.disabled = false;
-  openBtn.textContent = 'Открыть ещё';
+    // картинка / эмодзи у края
+    const rr = R * 0.82, px = c + Math.cos(mid) * rr, py = c + Math.sin(mid) * rr;
+    const ir = Math.max(10, Math.min(R * 0.13, rr * Math.sin(Math.min(seg / 2, 1.2)) * 0.85));
+    ctx.save();
+    ctx.beginPath(); ctx.arc(px, py, ir, 0, Math.PI * 2); ctx.closePath();
+    ctx.fillStyle = '#050304'; ctx.fill();
+    ctx.clip();
+    const img = images[prizes[i].id];
+    if (img) {
+      const s = Math.max(ir * 2 / img.width, ir * 2 / img.height);
+      ctx.drawImage(img, px - img.width * s / 2, py - img.height * s / 2, img.width * s, img.height * s);
+    } else {
+      ctx.font = Math.round(ir * 1.2) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🎁', px, py + 1);
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(px, py, ir, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ff3d7f'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
 }
 
-// ---------- Корзинка ----------
+function canSpin() { return ready && prizes.length > 0 && !spinning && Date.now() >= nextSpinAt; }
+
+function refreshBtn() {
+  if (spinning) { spinBtn.disabled = true; spinBtn.textContent = 'Крутится…'; return; }
+  if (!ready) { spinBtn.disabled = true; spinBtn.textContent = 'Загрузка…'; return; }
+  if (!prizes.length) { spinBtn.disabled = true; spinBtn.textContent = 'Призов нет'; return; }
+  const left = Math.ceil((nextSpinAt - Date.now()) / 1000);
+  if (left > 0) {
+    spinBtn.disabled = true; spinBtn.textContent = 'Через ' + fmtLeft(left);
+    setStatus('Колесо можно крутить раз в 24 часа');
+  } else {
+    spinBtn.disabled = false; spinBtn.textContent = 'Крутить колесо';
+    if (statusEl.textContent.startsWith('Колесо можно') || statusEl.textContent.startsWith('⏳')) setStatus('🎯 Крути и забирай приз');
+  }
+}
+
+async function spin() {
+  if (!canSpin()) return;
+  spinning = true; refreshBtn(); setStatus('🎲 Крутим…');
+  let res;
+  try {
+    res = await api('/api/spin', {});
+  } catch (e) {
+    spinning = false;
+    if (e.data && e.data.wait) nextSpinAt = Date.now() + e.data.wait * 1000;
+    setStatus('❌ ' + e.message, 'err');
+    refreshBtn();
+    return;
+  }
+  const prize = res.prize;
+  let idx = prizes.findIndex(p => p.id === prize.prize_id);
+  if (idx < 0) idx = Math.floor(Math.random() * prizes.length);
+  const seg = 360 / prizes.length;
+  const jitter = (Math.random() - 0.5) * seg * 0.6;
+  const targetMod = ((-(idx + 0.5) * seg + jitter) % 360 + 360) % 360;
+  const curMod = ((rot % 360) + 360) % 360;
+  rot += ((targetMod - curMod) + 360) % 360 + 360 * 6;
+  canvas.style.transition = 'transform 5.2s cubic-bezier(.12,.6,.1,1)';
+  canvas.style.transform = 'rotate(' + rot + 'deg)';
+  await sleep(5400);
+
+  spinning = false;
+  nextSpinAt = Date.now() + (res.spin_wait || 0) * 1000;
+  try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+  setStatus('🎉 Приз в твоих призах!', 'ok');
+  refreshBtn();
+  await loadVault();
+  showResult(vault.find(v => v.id === prize.id) || prize);
+}
+
+// ---------- призы гостя ----------
+function showResult(item) {
+  setThumb($('resThumb'), item.prize_image, '🎉');
+  $('resName').textContent = item.prize_name;
+  $('resShow').onclick = () => { $('resultOv').classList.remove('show'); showTicket(item); };
+  $('resultOv').classList.add('show');
+}
+
+let clockTimer = null;
+function showTicket(item) {
+  setThumb($('tkThumb'), item.prize_image, '🎁');
+  $('tkName').textContent = item.prize_name;
+  const info = $('tkInfo');
+  const who = tgUser.username ? '@' + tgUser.username : (tgUser.first_name || '—');
+  const won = item.won_at ? fmtDate(parseUtc(item.won_at)) : '—';
+  const rows = [['Гость', who], ['Telegram ID', tgUser.id || '—'], ['Заявка', '#' + item.id], ['Выигран', won]];
+  info.textContent = '';
+  rows.forEach(r => {
+    const line = document.createElement('div');
+    const k = document.createElement('span'); k.textContent = r[0] + ': ';
+    line.appendChild(k); line.appendChild(document.createTextNode(String(r[1])));
+    info.appendChild(line);
+  });
+  const nowLine = document.createElement('div');
+  const nk = document.createElement('span'); nk.textContent = 'Сейчас: ';
+  const clk = document.createElement('b'); clk.className = 'clock';
+  nowLine.appendChild(nk); nowLine.appendChild(clk); info.appendChild(nowLine);
+  const tick = () => { const d = new Date(); clk.textContent = fmtDate(d) + ':' + pad(d.getSeconds()); };
+  tick(); clearInterval(clockTimer); clockTimer = setInterval(tick, 1000);
+  $('ticketOv').classList.add('show');
+}
+function closeTicket() { clearInterval(clockTimer); $('ticketOv').classList.remove('show'); }
+
 function renderVault() {
   const list = $('vaultList');
   list.textContent = '';
+  const pending = vault.filter(v => v.display_status !== 'issued').length;
+  const badge = $('badge'); badge.textContent = pending; badge.hidden = pending === 0;
+
   if (!vault.length) {
-    const d = document.createElement('div');
-    d.className = 'empty';
-    d.textContent = 'Пока пусто. Открой кейс!';
-    list.appendChild(d);
-    return;
+    const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'Пока пусто. Покрути колесо!';
+    list.appendChild(d); return;
   }
   vault.forEach(it => {
-    const row = document.createElement('div');
-    row.className = 'vault-item';
-    const th = document.createElement('div'); th.className = 'vault-thumb';
-    imgOrEmoji(th, it.prize_image, '🎁');
-    const body = document.createElement('div'); body.className = 'vault-body';
-    const nm = document.createElement('div'); nm.className = 'vault-name'; nm.textContent = it.prize_name;
-    const st = document.createElement('div'); st.className = 'vault-state';
-    st.dataset.unlock = it.unlock_at;
-    st.dataset.status = it.display_status;
-    body.appendChild(nm); body.appendChild(st);
-    row.appendChild(th); row.appendChild(body);
-    list.appendChild(row);
-  });
-  tickVault();
-}
-
-function tickVault() {
-  const now = Date.now();
-  document.querySelectorAll('.vault-state').forEach(el => {
-    const status = el.dataset.status;
-    if (status === 'issued') {
-      el.className = 'vault-state st-issued';
-      el.textContent = '✅ Выдан';
-      return;
-    }
-    const left = Math.ceil((parseUtc(el.dataset.unlock).getTime() - now) / 1000);
-    if (left > 0) {
-      el.className = 'vault-state st-locked';
-      el.textContent = '🔒 Откроется через ' + fmtLeft(left);
+    const card = document.createElement('div'); card.className = 'card';
+    const th = document.createElement('div'); th.className = 'thumb'; setThumb(th, it.prize_image, '🎁');
+    const body = document.createElement('div'); body.className = 'card-body';
+    const nm = document.createElement('div'); nm.className = 'card-name'; nm.textContent = it.prize_name;
+    const meta = document.createElement('div'); meta.className = 'card-meta';
+    meta.textContent = '#' + it.id + ' · ' + (it.won_at ? fmtDate(parseUtc(it.won_at)) : '');
+    const st = document.createElement('div'); st.className = 'st';
+    body.appendChild(nm); body.appendChild(meta); body.appendChild(st);
+    if (it.display_status === 'issued') {
+      st.className = 'st issued'; st.textContent = '✅ Выдан';
     } else {
-      el.className = 'vault-state st-unlocked';
-      el.textContent = '🔓 Можно забрать на ресепшене';
+      st.className = 'st ready'; st.textContent = '🎁 Ждёт выдачи — покажи администратору';
+      const b = document.createElement('button'); b.className = 'btn small'; b.textContent = 'Показать администратору';
+      b.onclick = () => showTicket(it);
+      body.appendChild(b);
     }
+    card.appendChild(th); card.appendChild(body); list.appendChild(card);
   });
 }
 
 async function loadVault() {
-  try {
-    vault = (await api('/api/vault', {})).items || [];
-    renderVault();
-  } catch (e) {
-    $('vaultList').textContent = '';
-    const d = document.createElement('div');
-    d.className = 'empty';
-    d.textContent = '❌ ' + e.message;
-    $('vaultList').appendChild(d);
+  try { vault = (await api('/api/vault', {})).items || []; renderVault(); }
+  catch (e) {
+    const list = $('vaultList'); list.textContent = '';
+    const d = document.createElement('div'); d.className = 'empty'; d.textContent = '❌ ' + e.message; list.appendChild(d);
   }
 }
 
-// ---------- Вкладки ----------
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + btn.dataset.tab));
-    if (btn.dataset.tab === 'vault') loadVault();
-  });
-});
-openBtn.addEventListener('click', openCase);
+// ---------- события ----------
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + btn.dataset.tab));
+  if (btn.dataset.tab === 'vault') loadVault(); else drawWheel();
+}));
+spinBtn.addEventListener('click', spin);
+$('clubBtn').addEventListener('click', openClub);
+$('resClose').addEventListener('click', () => $('resultOv').classList.remove('show'));
+$('tkClose').addEventListener('click', closeTicket);
+window.addEventListener('resize', drawWheel);
+setInterval(() => { if (ready && !spinning) refreshBtn(); }, 1000);
 
-// ---------- Старт ----------
+// ---------- старт ----------
 async function boot() {
-  if (!initData) {
-    setStatus('❌ Откройте приложение через бота в Telegram', 'err');
-    return;
-  }
-  setStatus('⏳ Подключаемся к серверу (может занять до минуты)...');
+  drawWheel();
+  if (!initData) { setStatus('❌ Откройте приложение через бота в Telegram', 'err'); return; }
+  setStatus('⏳ Подключаемся к серверу (до минуты)…');
   try {
-    await api('/api/verify', {});
+    const v = await api('/api/verify', {});
+    nextSpinAt = Date.now() + (v.spin_wait || 0) * 1000;
     prizes = (await api('/api/prizes')).prizes || [];
-    renderPrizes();
-    if (!prizes.length) {
-      setStatus('Призов пока нет. Загляните позже.', 'err');
-    } else {
-      setStatus('🎯 Нажмите «Открыть»');
-      openBtn.textContent = 'Открыть';
-      openBtn.disabled = false;
-    }
+    ready = true;
+    loadImages(); drawWheel();
+    setStatus(prizes.length ? '🎯 Крути и забирай приз' : 'Призов пока нет. Загляните позже.', prizes.length ? '' : 'err');
+    refreshBtn();
     loadVault();
-    vaultTimer = setInterval(tickVault, 1000);
-  } catch (e) {
-    setStatus('❌ ' + e.message, 'err');
-  }
+  } catch (e) { setStatus('❌ ' + e.message, 'err'); }
 }
 boot();
 </script>

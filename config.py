@@ -1,6 +1,6 @@
 """
-Все настройки берутся ТОЛЬКО из переменных окружения Railway (Variables в
-настройках сервиса). Никакого .env-файла в проекте нет и быть не должно —
+Все настройки берутся ТОЛЬКО из переменных окружения (Render → Environment).
+Никакого .env-файла в проекте нет и быть не должно —
 секреты никогда не должны лежать в репозитории.
 """
 import os
@@ -10,7 +10,7 @@ import sys
 def _fail(name: str) -> "str":
     print(
         f"❌ Переменная окружения {name} не задана. "
-        f"Задайте её в Railway → Settings → Variables и передеплойте.",
+        f"Задайте её в Render → Environment и передеплойте.",
         flush=True,
     )
     sys.exit(1)
@@ -23,11 +23,18 @@ ADMIN_IDS = {int(x) for x in _admin_raw.replace(" ", "").split(",") if x.isdigit
 if not ADMIN_IDS:
     _fail("ADMIN_IDS")
 
-PUBLIC_URL = (os.environ.get("PUBLIC_URL") or _fail("PUBLIC_URL")).rstrip("/")
+# Render сам задаёт RENDER_EXTERNAL_URL (https://<сервис>.onrender.com),
+# так что PUBLIC_URL можно не указывать вручную.
+PUBLIC_URL = (
+    os.environ.get("PUBLIC_URL")
+    or os.environ.get("RENDER_EXTERNAL_URL")
+    or _fail("PUBLIC_URL")
+).rstrip("/")
 
 PORT = int(os.environ.get("PORT", "8080"))
 
 # сколько часов приз лежит заблокированным в "корзинке" гостя
 VAULT_LOCK_HOURS = 24
 
-DB_PATH = os.environ.get("DB_PATH", "giftbot.db")
+# строка подключения к PostgreSQL (Neon / Supabase)
+DATABASE_URL = os.environ.get("DATABASE_URL") or _fail("DATABASE_URL")

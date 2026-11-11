@@ -1,19 +1,19 @@
 """
-Работа с БД через стандартный sqlite3 (без внешних зависимостей).
-Каждый вызов выполняется в отдельном потоке через asyncio.to_thread,
-чтобы не блокировать event loop бота — снаружи функции остаются async,
-вызывающий код (bot.py, handlers/*) не меняется.
+Работа с БД через PostgreSQL (asyncpg).
+Сигнатуры всех функций те же, что были в версии на sqlite3,
+поэтому bot.py и handlers/* менять не нужно.
 """
-import asyncio
 import datetime
 import random
-import sqlite3
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from config import DB_PATH, VAULT_LOCK_HOURS, ADMIN_IDS
+import asyncpg
+
+from config import DATABASE_URL, VAULT_LOCK_HOURS, ADMIN_IDS
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
-    tg_id INTEGER PRIMARY KEY,
+    tg_id BIGINT PRIMARY KEY,
     username TEXT,
     first_name TEXT,
     is_admin INTEGER DEFAULT 0,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS prizes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     image_url TEXT,
@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS prizes (
 );
 
 CREATE TABLE IF NOT EXISTS vault (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     prize_id INTEGER,
     prize_name TEXT NOT NULL,
     prize_image TEXT,
@@ -41,55 +41,49 @@ CREATE TABLE IF NOT EXISTS vault (
     unlock_at TEXT NOT NULL,
     status TEXT DEFAULT 'locked',
     issued_at TEXT,
-    issued_by INTEGER
+    issued_by BIGINT
 );
 """
 
+_pool: asyncpg.Pool | None = None
 
-def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+
+def _clean_dsn(dsn: str) -> str:
+    """Neon добавляет в строку channel_binding=require — asyncpg его не понимает."""
+    parts = urlsplit(dsn)
+    query = [(k, v) for k, v in parse_qsl(parts.query) if k != "channel_binding"]
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 def now() -> str:
     return datetime.datetime.utcnow().isoformat()
 
 
-def _init_db_sync():
-    conn = _connect()
-    try:
-        conn.executescript(SCHEMA)
-        conn.commit()
-    finally:
-        conn.close()
-
-
 async def init_db():
-    await asyncio.to_thread(_init_db_sync)
-
-
-def _upsert_user_sync(tg_id, username, first_name):
-    conn = _connect()
-    try:
-        is_admin = 1 if tg_id in ADMIN_IDS else 0
-        conn.execute(
-            """INSERT INTO users (tg_id, username, first_name, is_admin, created_at)
-               VALUES (?, ?, ?, ?, ?)
-               ON CONFLICT(tg_id) DO UPDATE SET
-                 username=excluded.username,
-                 first_name=excluded.first_name,
-                 is_admin=excluded.is_admin""",
-            (tg_id, username, first_name, is_admin, now()),
-        )
-        conn.commit()
-    finally:
-        conn.close()
+    global _pool
+    _pool = await asyncpg.create_pool(
+        _clean_dsn(DATABASE_URL),
+        min_size=1,
+        max_size=5,
+        statement_cache_size=0,               # совместимо с pgbouncer/pooler
+        max_inactive_connection_lifetime=240,  # Neon усыпляет простаивающие соединения
+        command_timeout=30,
+    )
+    async with _pool.acquire() as conn:
+        await conn.execute(SCHEMA)
 
 
 async def upsert_user(tg_id: int, username: str, first_name: str):
-    await asyncio.to_thread(_upsert_user_sync, tg_id, username, first_name)
+    is_admin = 1 if tg_id in ADMIN_IDS else 0
+    await _pool.execute(
+        """INSERT INTO users (tg_id, username, first_name, is_admin, created_at)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (tg_id) DO UPDATE SET
+             username=EXCLUDED.username,
+             first_name=EXCLUDED.first_name,
+             is_admin=EXCLUDED.is_admin""",
+        tg_id, username, first_name, is_admin, now(),
+    )
 
 
 async def is_admin(tg_id: int) -> bool:
@@ -98,127 +92,94 @@ async def is_admin(tg_id: int) -> bool:
 
 # ---------- Призы ----------
 
-def _list_active_prizes_sync():
-    conn = _connect()
-    try:
-        rows = conn.execute(
-            "SELECT * FROM prizes WHERE active=1 AND (stock=-1 OR stock>0) ORDER BY id"
-        ).fetchall()
-        return [dict(r) for r in rows]
-    finally:
-        conn.close()
-
-
 async def list_active_prizes():
-    return await asyncio.to_thread(_list_active_prizes_sync)
-
-
-def _list_all_prizes_sync():
-    conn = _connect()
-    try:
-        rows = conn.execute("SELECT * FROM prizes ORDER BY id DESC").fetchall()
-        return [dict(r) for r in rows]
-    finally:
-        conn.close()
+    rows = await _pool.fetch(
+        "SELECT * FROM prizes WHERE active=1 AND (stock=-1 OR stock>0) ORDER BY id"
+    )
+    return [dict(r) for r in rows]
 
 
 async def list_all_prizes():
-    return await asyncio.to_thread(_list_all_prizes_sync)
-
-
-def _create_prize_sync(name, description, image_url, weight, stock):
-    conn = _connect()
-    try:
-        cur = conn.execute(
-            """INSERT INTO prizes (name, description, image_url, weight, stock, active, created_at)
-               VALUES (?, ?, ?, ?, ?, 1, ?)""",
-            (name, description, image_url, weight, stock, now()),
-        )
-        conn.commit()
-        return cur.lastrowid
-    finally:
-        conn.close()
+    rows = await _pool.fetch("SELECT * FROM prizes ORDER BY id DESC")
+    return [dict(r) for r in rows]
 
 
 async def create_prize(name, description, image_url, weight, stock):
-    return await asyncio.to_thread(_create_prize_sync, name, description, image_url, weight, stock)
+    return await _pool.fetchval(
+        """INSERT INTO prizes (name, description, image_url, weight, stock, active, created_at)
+           VALUES ($1, $2, $3, $4, $5, 1, $6)
+           RETURNING id""",
+        name, description, image_url, weight, stock, now(),
+    )
 
 
-def _update_prize_sync(prize_id, fields: dict):
-    if not fields:
-        return
-    cols = ", ".join(f"{k}=?" for k in fields)
-    values = list(fields.values()) + [prize_id]
-    conn = _connect()
-    try:
-        conn.execute(f"UPDATE prizes SET {cols} WHERE id=?", values)
-        conn.commit()
-    finally:
-        conn.close()
+_PRIZE_FIELDS = {"name", "description", "image_url", "weight", "stock", "active"}
+_PRIZE_INT_FIELDS = {"weight", "stock"}
 
 
 async def update_prize(prize_id, **fields):
-    await asyncio.to_thread(_update_prize_sync, prize_id, fields)
-
-
-def _delete_prize_sync(prize_id):
-    conn = _connect()
-    try:
-        conn.execute("DELETE FROM prizes WHERE id=?", (prize_id,))
-        conn.commit()
-    finally:
-        conn.close()
+    fields = {k: v for k, v in fields.items() if k in _PRIZE_FIELDS}
+    if not fields:
+        return
+    values = []
+    for k, v in fields.items():
+        if k in _PRIZE_INT_FIELDS:
+            v = int(v)
+        elif k == "active":
+            v = 1 if v in (True, 1, "1", "true", "True") else 0
+        values.append(v)
+    cols = ", ".join(f"{k}=${i}" for i, k in enumerate(fields, start=1))
+    values.append(prize_id)
+    await _pool.execute(
+        f"UPDATE prizes SET {cols} WHERE id=${len(values)}", *values
+    )
 
 
 async def delete_prize(prize_id):
-    await asyncio.to_thread(_delete_prize_sync, prize_id)
+    await _pool.execute("DELETE FROM prizes WHERE id=$1", prize_id)
 
 
 # ---------- Корзинка (vault) ----------
 
-def _draw_prize_for_user_sync(user_id: int):
-    conn = _connect()
-    try:
-        prizes = [
-            dict(r)
-            for r in conn.execute(
-                "SELECT * FROM prizes WHERE active=1 AND (stock=-1 OR stock>0) ORDER BY id"
-            ).fetchall()
-        ]
-        if not prizes:
-            return None
-
-        weights = [max(p["weight"], 0) or 1 for p in prizes]
-        prize = random.choices(prizes, weights=weights, k=1)[0]
-
-        won_at = datetime.datetime.utcnow()
-        unlock_at = won_at + datetime.timedelta(hours=VAULT_LOCK_HOURS)
-
-        if prize["stock"] > 0:
-            conn.execute("UPDATE prizes SET stock = stock - 1 WHERE id=?", (prize["id"],))
-
-        cur = conn.execute(
-            """INSERT INTO vault (user_id, prize_id, prize_name, prize_image, won_at, unlock_at, status)
-               VALUES (?, ?, ?, ?, ?, ?, 'locked')""",
-            (user_id, prize["id"], prize["name"], prize["image_url"],
-             won_at.isoformat(), unlock_at.isoformat()),
-        )
-        conn.commit()
-        vault_id = cur.lastrowid
-
-        return {
-            "id": vault_id,
-            "prize_name": prize["name"],
-            "prize_image": prize["image_url"],
-            "won_at": won_at.isoformat(),
-            "unlock_at": unlock_at.isoformat(),
-        }
-    finally:
-        conn.close()
-
-
 async def draw_prize_for_user(user_id: int):
-    return await asyncio.to_thread(_draw_prize_for_user_sync, user_id)
+    async with _pool.acquire() as conn:
+        async with conn.transaction():
+            # FOR UPDATE — чтобы два одновременных спина не списали один и тот же остаток
+            rows = await conn.fetch(
+                """SELECT * FROM prizes
+                   WHERE active=1 AND (stock=-1 OR stock>0)
+                   ORDER BY id FOR UPDATE"""
+            )
+            prizes = [dict(r) for r in rows]
+            if not prizes:
+                return None
+
+            weights = [max(p["weight"] or 0, 0) or 1 for p in prizes]
+            prize = random.choices(prizes, weights=weights, k=1)[0]
+
+            won_at = datetime.datetime.utcnow()
+            unlock_at = won_at + datetime.timedelta(hours=VAULT_LOCK_HOURS)
+
+            if prize["stock"] > 0:
+                await conn.execute(
+                    "UPDATE prizes SET stock = stock - 1 WHERE id=$1", prize["id"]
+                )
+
+            vault_id = await conn.fetchval(
+                """INSERT INTO vault (user_id, prize_id, prize_name, prize_image, won_at, unlock_at, status)
+                   VALUES ($1, $2, $3, $4, $5, $6, 'locked')
+                   RETURNING id""",
+                user_id, prize["id"], prize["name"], prize["image_url"],
+                won_at.isoformat(), unlock_at.isoformat(),
+            )
+
+    return {
+        "id": vault_id,
+        "prize_name": prize["name"],
+        "prize_image": prize["image_url"],
+        "won_at": won_at.isoformat(),
+        "unlock_at": unlock_at.isoformat(),
+    }
 
 
 def _compute_status(row: dict) -> dict:
@@ -235,85 +196,56 @@ def _compute_status(row: dict) -> dict:
     return row
 
 
-def _get_user_vault_sync(user_id: int):
-    conn = _connect()
-    try:
-        rows = conn.execute(
-            "SELECT * FROM vault WHERE user_id=? ORDER BY won_at DESC", (user_id,)
-        ).fetchall()
-        return [_compute_status(dict(r)) for r in rows]
-    finally:
-        conn.close()
-
-
 async def get_user_vault(user_id: int):
-    return await asyncio.to_thread(_get_user_vault_sync, user_id)
-
-
-def _get_all_vault_sync(status_filter):
-    conn = _connect()
-    try:
-        rows = conn.execute(
-            """SELECT vault.*, users.username, users.first_name
-               FROM vault LEFT JOIN users ON users.tg_id = vault.user_id
-               ORDER BY vault.won_at DESC"""
-        ).fetchall()
-        rows = [_compute_status(dict(r)) for r in rows]
-        if status_filter:
-            rows = [r for r in rows if r["display_status"] == status_filter]
-        return rows
-    finally:
-        conn.close()
+    rows = await _pool.fetch(
+        "SELECT * FROM vault WHERE user_id=$1 ORDER BY won_at DESC", user_id
+    )
+    return [_compute_status(dict(r)) for r in rows]
 
 
 async def get_all_vault(status_filter: str = None):
-    return await asyncio.to_thread(_get_all_vault_sync, status_filter)
-
-
-def _issue_prize_sync(vault_id: int, admin_id: int):
-    conn = _connect()
-    try:
-        row = conn.execute("SELECT * FROM vault WHERE id=?", (vault_id,)).fetchone()
-        if not row:
-            return False, "Приз не найден"
-        row = _compute_status(dict(row))
-        if row["display_status"] == "issued":
-            return False, "Приз уже выдан"
-        if row["display_status"] == "locked":
-            return False, "Приз ещё под замком"
-
-        conn.execute(
-            "UPDATE vault SET status='issued', issued_at=?, issued_by=? WHERE id=?",
-            (now(), admin_id, vault_id),
-        )
-        conn.commit()
-        return True, "Выдано"
-    finally:
-        conn.close()
+    rows = await _pool.fetch(
+        """SELECT vault.*, users.username, users.first_name
+           FROM vault LEFT JOIN users ON users.tg_id = vault.user_id
+           ORDER BY vault.won_at DESC"""
+    )
+    items = [_compute_status(dict(r)) for r in rows]
+    if status_filter:
+        items = [r for r in items if r["display_status"] == status_filter]
+    return items
 
 
 async def issue_prize(vault_id: int, admin_id: int):
-    return await asyncio.to_thread(_issue_prize_sync, vault_id, admin_id)
+    async with _pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT * FROM vault WHERE id=$1 FOR UPDATE", vault_id
+            )
+            if not row:
+                return False, "Приз не найден"
+            row = _compute_status(dict(row))
+            if row["display_status"] == "issued":
+                return False, "Приз уже выдан"
+            if row["display_status"] == "locked":
+                return False, "Приз ещё под замком"
 
-
-def _stats_sync():
-    conn = _connect()
-    try:
-        users = conn.execute("SELECT COUNT(*) c FROM users").fetchone()["c"]
-        prizes = conn.execute("SELECT COUNT(*) c FROM prizes WHERE active=1").fetchone()["c"]
-        locked = conn.execute("SELECT COUNT(*) c FROM vault WHERE status='locked'").fetchone()["c"]
-        issued = conn.execute("SELECT COUNT(*) c FROM vault WHERE status='issued'").fetchone()["c"]
-        total_wins = conn.execute("SELECT COUNT(*) c FROM vault").fetchone()["c"]
-        return {
-            "users": users,
-            "active_prizes": prizes,
-            "locked_in_vault": locked,
-            "issued": issued,
-            "total_wins": total_wins,
-        }
-    finally:
-        conn.close()
+            await conn.execute(
+                "UPDATE vault SET status='issued', issued_at=$1, issued_by=$2 WHERE id=$3",
+                now(), admin_id, vault_id,
+            )
+            return True, "Выдано"
 
 
 async def stats():
-    return await asyncio.to_thread(_stats_sync)
+    users = await _pool.fetchval("SELECT COUNT(*) FROM users")
+    prizes = await _pool.fetchval("SELECT COUNT(*) FROM prizes WHERE active=1")
+    locked = await _pool.fetchval("SELECT COUNT(*) FROM vault WHERE status='locked'")
+    issued = await _pool.fetchval("SELECT COUNT(*) FROM vault WHERE status='issued'")
+    total_wins = await _pool.fetchval("SELECT COUNT(*) FROM vault")
+    return {
+        "users": users,
+        "active_prizes": prizes,
+        "locked_in_vault": locked,
+        "issued": issued,
+        "total_wins": total_wins,
+    }

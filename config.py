@@ -33,8 +33,14 @@ PUBLIC_URL = (
 
 PORT = int(os.environ.get("PORT", "8080"))
 
-# сколько часов приз лежит заблокированным в "корзинке" гостя
-VAULT_LOCK_HOURS = 24
+# Приз можно получить сразу (замка в "корзинке" больше нет)
+VAULT_LOCK_HOURS = 0
+
+# Как часто гость может крутить колесо
+SPIN_COOLDOWN_HOURS = 24
+
+# Админы крутят без ограничения (удобно для проверки). Поставьте False, чтобы отключить.
+ADMIN_NO_COOLDOWN = True
 
 # строка подключения к PostgreSQL (Neon / Supabase)
 DATABASE_URL = os.environ.get("DATABASE_URL") or _fail("DATABASE_URL")

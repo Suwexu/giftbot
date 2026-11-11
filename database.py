@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import asyncpg
 
-from config import DATABASE_URL, VAULT_LOCK_HOURS, ADMIN_IDS
+from config import DATABASE_URL, VAULT_LOCK_HOURS, ADMIN_IDS, SPIN_COOLDOWN_HOURS, ADMIN_NO_COOLDOWN
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_admin INTEGER DEFAULT 0,
     created_at TEXT
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_spin_at TEXT;
 
 CREATE TABLE IF NOT EXISTS prizes (
     id SERIAL PRIMARY KEY,
@@ -141,10 +142,49 @@ async def delete_prize(prize_id):
 
 # ---------- Корзинка (vault) ----------
 
+def _cooldown_applies(user_id: int) -> bool:
+    return not (ADMIN_NO_COOLDOWN and user_id in ADMIN_IDS)
+
+
+def _wait_seconds(last_spin_at) -> int:
+    if not last_spin_at:
+        return 0
+    next_at = datetime.datetime.fromisoformat(last_spin_at) + datetime.timedelta(
+        hours=SPIN_COOLDOWN_HOURS
+    )
+    return max(0, int((next_at - datetime.datetime.utcnow()).total_seconds()))
+
+
+async def get_spin_wait(user_id: int) -> int:
+    """Сколько секунд осталось до следующего вращения (0 — можно крутить)."""
+    if not _cooldown_applies(user_id):
+        return 0
+    last = await _pool.fetchval("SELECT last_spin_at FROM users WHERE tg_id=$1", user_id)
+    return _wait_seconds(last)
+
+
 async def draw_prize_for_user(user_id: int):
+    """
+    Возвращает:
+      None                      — нет доступных призов
+      {"cooldown": секунды}     — колесо уже крутили, ждать ещё столько секунд
+      {...приз...}              — выигрыш (сразу попадает в "корзинку")
+    """
     async with _pool.acquire() as conn:
         async with conn.transaction():
-            # FOR UPDATE — чтобы два одновременных спина не списали один и тот же остаток
+            await conn.execute(
+                "INSERT INTO users (tg_id, created_at) VALUES ($1, $2) ON CONFLICT (tg_id) DO NOTHING",
+                user_id, now(),
+            )
+            # блокируем строку гостя, чтобы два одновременных спина не прошли
+            last = await conn.fetchval(
+                "SELECT last_spin_at FROM users WHERE tg_id=$1 FOR UPDATE", user_id
+            )
+            if _cooldown_applies(user_id):
+                wait = _wait_seconds(last)
+                if wait > 0:
+                    return {"cooldown": wait}
+
             rows = await conn.fetch(
                 """SELECT * FROM prizes
                    WHERE active=1 AND (stock=-1 OR stock>0)
@@ -165,6 +205,11 @@ async def draw_prize_for_user(user_id: int):
                     "UPDATE prizes SET stock = stock - 1 WHERE id=$1", prize["id"]
                 )
 
+            await conn.execute(
+                "UPDATE users SET last_spin_at=$1 WHERE tg_id=$2",
+                won_at.isoformat(), user_id,
+            )
+
             vault_id = await conn.fetchval(
                 """INSERT INTO vault (user_id, prize_id, prize_name, prize_image, won_at, unlock_at, status)
                    VALUES ($1, $2, $3, $4, $5, $6, 'locked')
@@ -175,6 +220,7 @@ async def draw_prize_for_user(user_id: int):
 
     return {
         "id": vault_id,
+        "prize_id": prize["id"],
         "prize_name": prize["name"],
         "prize_image": prize["image_url"],
         "won_at": won_at.isoformat(),

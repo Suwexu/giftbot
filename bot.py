@@ -51,7 +51,8 @@ async def api_verify(request):
     if not user:
         return json_response({"ok": False, "error": "invalid initData"}, 401)
     await db.upsert_user(user["id"], user.get("username") or "", user.get("first_name") or "")
-    return json_response({"ok": True, "user": user})
+    spin_wait = await db.get_spin_wait(user["id"])
+    return json_response({"ok": True, "user": user, "spin_wait": spin_wait})
 
 
 async def api_prizes(request):
@@ -68,7 +69,13 @@ async def api_spin(request):
     prize = await db.draw_prize_for_user(user["id"])
     if not prize:
         return json_response({"ok": False, "error": "Нет доступных призов"}, 400)
-    return json_response({"ok": True, "prize": prize})
+    if prize.get("cooldown"):
+        return json_response(
+            {"ok": False, "error": "Колесо можно крутить раз в 24 часа", "wait": prize["cooldown"]},
+            429,
+        )
+    spin_wait = await db.get_spin_wait(user["id"])
+    return json_response({"ok": True, "prize": prize, "spin_wait": spin_wait})
 
 
 async def api_vault(request):

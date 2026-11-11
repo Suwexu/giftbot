@@ -180,6 +180,23 @@ def build_app() -> web.Application:
     app.router.add_post("/api/admin/vault", api_admin_vault_list)
     app.router.add_post("/api/admin/vault/{vault_id}/issue", api_admin_vault_issue)
 
+    # Открытие папок без имени файла (/app/, /admin/) отдаёт index.html,
+    # иначе aiohttp отвечает 403 Forbidden.
+    def index_handler(folder):
+        async def handler(request):
+            return web.FileResponse(STATIC_DIR / folder / "index.html")
+        return handler
+
+    def redirect_handler(target):
+        async def handler(request):
+            # со слэшем на конце, чтобы style.css / app.js грузились из папки страницы
+            raise web.HTTPFound(target)
+        return handler
+
+    for prefix, folder in (("/app", "guest"), ("/admin", "admin")):
+        app.router.add_get(prefix, redirect_handler(prefix + "/"))
+        app.router.add_get(prefix + "/", index_handler(folder))
+
     app.router.add_static("/app/", STATIC_DIR / "guest", show_index=False)
     app.router.add_static("/admin/", STATIC_DIR / "admin", show_index=False)
     return app

@@ -107,6 +107,9 @@ body::before {
   background:rgba(255,176,32,.08); border:1px solid rgba(255,176,32,.45); color:#ffd37a;
 }
 .notice b { color:#fff; font-weight:700; }
+.exp { margin-top:6px; font-size:12px; font-weight:700; color:var(--warn); }
+.exp.hot { color:var(--bad); }
+.notice.err { background:rgba(255,84,112,.1); border-color:rgba(255,84,112,.55); color:#ff9aab; }
 
 /* призы */
 .card { display:flex; gap:12px; align-items:center; padding:12px; margin-top:12px; border-radius:18px; background:var(--panel); border:1px solid var(--line); }
@@ -123,6 +126,7 @@ body::before {
 .st.ready { color:var(--ok); } .st.issued { color:var(--muted); }
 .empty { text-align:center; color:var(--muted); padding:34px 0; font-size:14px; }
 .club { position:relative; z-index:1; margin-top:22px; }
+[hidden] { display:none !important; }
 
 /* окна */
 .overlay { position:fixed; inset:0; z-index:20; background:rgba(3,1,2,.88); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:18px; overflow-y:auto; }
@@ -176,11 +180,11 @@ body::before {
     </div>
     <div class="status" id="status">⏳ Загрузка...</div>
     <button class="btn go" id="spinBtn" disabled>Крутить колесо</button>
-    <div class="notice">⚠️ <b>Выигранный приз нужно показать администратору.</b> Он сфотографирует твой приз — без этого приз не выдаётся.</div>
+    <div class="notice">⚠️ <b>Выигранный приз нужно показать администратору.</b> Он сфотографирует твой приз — без этого приз не выдаётся.<br>⏳ Приз действует <b><span class="ttl">48</span> ч</b> с момента выигрыша, потом он <b>пропадает</b>.</div>
   </section>
 
   <section class="view" id="view-vault">
-    <div class="notice" style="margin-top:0">⚠️ Чтобы получить приз, нажми «Показать администратору». <b>Администратор должен сфотографировать экран</b> с призом перед выдачей.</div>
+    <div class="notice" style="margin-top:0">⚠️ Чтобы получить приз, нажми «Показать администратору». <b>Администратор должен сфотографировать экран</b> с призом перед выдачей.<br>⏳ Не показал за <b><span class="ttl">48</span> ч</b> — приз пропадёт.</div>
     <div id="vaultList"></div>
   </section>
 
@@ -194,6 +198,7 @@ body::before {
     <div class="big-thumb" id="resThumb">🎁</div>
     <div class="prize-title" id="resName"></div>
     <div class="notice" style="text-align:left">⚠️ <b>Покажи этот приз администратору.</b> Он должен сфотографировать его — только после этого приз выдадут.</div>
+    <div class="notice err" style="text-align:left">⏳ <b>Приз действует <span class="ttl">48</span> ч — до <span id="resUntil">…</span>.</b> Если не показать его администратору за это время, он <b>пропадёт</b> без возможности вернуть.</div>
     <button class="btn small" id="resShow">Показать администратору</button>
     <button class="btn ghost small" id="resClose">Позже</button>
   </div>
@@ -206,8 +211,14 @@ body::before {
     <div class="big-thumb" id="tkThumb">🎁</div>
     <div class="prize-title" id="tkName"></div>
     <div class="kv" id="tkInfo"></div>
-    <div class="notice" style="text-align:left">📸 <b>Администратор:</b> сфотографируйте этот экран перед выдачей приза.</div>
+    <div class="notice" style="text-align:left">📸 <b>Администратор:</b> сфотографируйте этот экран перед выдачей приза. После этого гость нажимает «Закрыть» — приз исчезнет из списка.</div>
     <button class="btn ghost small" id="tkClose">Закрыть</button>
+    <div id="tkConfirm" hidden>
+      <div class="notice" style="text-align:left">❓ <b>Администратор сфотографировал приз?</b> После закрытия приз <b>пропадёт</b>, вернуть его будет нельзя.</div>
+      <div class="notice err" id="tkErr" style="text-align:left" hidden></div>
+      <button class="btn small" id="tkYes">Да, закрыть</button>
+      <button class="btn ghost small" id="tkBack">Вернуться</button>
+    </div>
   </div>
 </div>
 
@@ -394,18 +405,22 @@ async function spin() {
 function showResult(item) {
   setThumb($('resThumb'), item.prize_image, '🎉');
   $('resName').textContent = item.prize_name;
+  $('resUntil').textContent = item.expires_at ? fmtDate(parseUtc(item.expires_at)) : '…';
   $('resShow').onclick = () => { $('resultOv').classList.remove('show'); showTicket(item); };
   $('resultOv').classList.add('show');
 }
 
-let clockTimer = null;
+let clockTimer = null, currentTicket = null;
 function showTicket(item) {
+  currentTicket = item;
+  $('tkConfirm').hidden = true; $('tkErr').hidden = true; $('tkClose').hidden = false;
   setThumb($('tkThumb'), item.prize_image, '🎁');
   $('tkName').textContent = item.prize_name;
   const info = $('tkInfo');
   const who = tgUser.username ? '@' + tgUser.username : (tgUser.first_name || '—');
   const won = item.won_at ? fmtDate(parseUtc(item.won_at)) : '—';
   const rows = [['Гость', who], ['Telegram ID', tgUser.id || '—'], ['Заявка', '#' + item.id], ['Выигран', won]];
+  if (item.expires_at) rows.push(['Действует до', fmtDate(parseUtc(item.expires_at))]);
   info.textContent = '';
   rows.forEach(r => {
     const line = document.createElement('div');
@@ -442,6 +457,10 @@ function renderVault() {
     meta.textContent = '#' + it.id + ' · ' + (it.won_at ? fmtDate(parseUtc(it.won_at)) : '');
     const st = document.createElement('div'); st.className = 'st';
     body.appendChild(nm); body.appendChild(meta); body.appendChild(st);
+    if (it.expires_at) {
+      const ex = document.createElement('div'); ex.className = 'exp'; ex.dataset.exp = it.expires_at;
+      body.appendChild(ex);
+    }
     if (it.display_status === 'issued') {
       st.className = 'st issued'; st.textContent = '✅ Выдан';
     } else {
@@ -471,9 +490,33 @@ document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', (
 spinBtn.addEventListener('click', spin);
 $('clubBtn').addEventListener('click', openClub);
 $('resClose').addEventListener('click', () => $('resultOv').classList.remove('show'));
-$('tkClose').addEventListener('click', closeTicket);
+$('tkClose').addEventListener('click', () => { $('tkClose').hidden = true; $('tkConfirm').hidden = false; });
+$('tkBack').addEventListener('click', () => { $('tkConfirm').hidden = true; $('tkErr').hidden = true; $('tkClose').hidden = false; });
+$('tkYes').addEventListener('click', async () => {
+  if (!currentTicket) return;
+  const btn = $('tkYes'); btn.disabled = true; $('tkErr').hidden = true;
+  try {
+    await api('/api/claim', { vault_id: currentTicket.id });
+    closeTicket();
+    await loadVault();
+    setStatus('✅ Приз выдан', 'ok');
+  } catch (e) {
+    $('tkErr').textContent = '❌ ' + e.message; $('tkErr').hidden = false;
+  } finally { btn.disabled = false; }
+});
 window.addEventListener('resize', drawWheel);
-setInterval(() => { if (ready && !spinning) refreshBtn(); }, 1000);
+let expReload = false;
+function tickExpiry() {
+  let expired = false;
+  document.querySelectorAll('.exp').forEach(el => {
+    const left = Math.ceil((parseUtc(el.dataset.exp).getTime() - Date.now()) / 1000);
+    if (left <= 0) { expired = true; el.textContent = '⌛ Срок вышел'; return; }
+    el.textContent = '⏳ Сгорит через ' + fmtLeft(left);
+    el.classList.toggle('hot', left < 6 * 3600);
+  });
+  if (expired && !expReload) { expReload = true; loadVault().finally(() => { expReload = false; }); }
+}
+setInterval(() => { if (ready && !spinning) refreshBtn(); tickExpiry(); }, 1000);
 
 // ---------- старт ----------
 async function boot() {
@@ -483,6 +526,7 @@ async function boot() {
   try {
     const v = await api('/api/verify', {});
     nextSpinAt = Date.now() + (v.spin_wait || 0) * 1000;
+    if (v.prize_ttl_hours) document.querySelectorAll('.ttl').forEach(el => { el.textContent = v.prize_ttl_hours; });
     prizes = (await api('/api/prizes')).prizes || [];
     ready = true;
     loadImages(); drawWheel();

@@ -36,11 +36,15 @@ PORT = int(os.environ.get("PORT", "8080"))
 # Приз можно получить сразу (замка в "корзинке" больше нет)
 VAULT_LOCK_HOURS = 0
 
+# Через сколько часов после выигрыша приз сгорает, если его не показали администратору
+PRIZE_TTL_HOURS = 48
+
 # Как часто гость может крутить колесо
 SPIN_COOLDOWN_HOURS = 24
 
-# Админы крутят без ограничения (удобно для проверки). Поставьте False, чтобы отключить.
-ADMIN_NO_COOLDOWN = True
+# По умолчанию ограничение 24 часа действует на ВСЕХ, включая админов.
+# Для проверки можно временно задать в Render переменную ADMIN_NO_COOLDOWN=1.
+ADMIN_NO_COOLDOWN = os.environ.get("ADMIN_NO_COOLDOWN", "0") == "1"
 
 # строка подключения к PostgreSQL (Neon / Supabase)
 DATABASE_URL = os.environ.get("DATABASE_URL") or _fail("DATABASE_URL")

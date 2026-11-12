@@ -9,7 +9,9 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import asyncpg
 
-from config import DATABASE_URL, VAULT_LOCK_HOURS, ADMIN_IDS, SPIN_COOLDOWN_HOURS, ADMIN_NO_COOLDOWN
+from config import (
+    DATABASE_URL, VAULT_LOCK_HOURS, ADMIN_IDS, SPIN_COOLDOWN_HOURS, ADMIN_NO_COOLDOWN, PRIZE_TTL_HOURS,
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -225,20 +227,24 @@ async def draw_prize_for_user(user_id: int):
         "prize_image": prize["image_url"],
         "won_at": won_at.isoformat(),
         "unlock_at": unlock_at.isoformat(),
+        "expires_at": (won_at + datetime.timedelta(hours=PRIZE_TTL_HOURS)).isoformat(),
     }
 
 
 def _compute_status(row: dict) -> dict:
+    now_dt = datetime.datetime.utcnow()
     unlock_at = datetime.datetime.fromisoformat(row["unlock_at"])
+    expires_at = datetime.datetime.fromisoformat(row["won_at"]) + datetime.timedelta(hours=PRIZE_TTL_HOURS)
+    row["expires_at"] = expires_at.isoformat()
     if row["status"] == "issued":
         row["display_status"] = "issued"
-    elif datetime.datetime.utcnow() >= unlock_at:
+    elif now_dt >= expires_at:
+        row["display_status"] = "expired"   # срок вышел, приз сгорел
+    elif now_dt >= unlock_at:
         row["display_status"] = "unlocked"
     else:
         row["display_status"] = "locked"
-        row["seconds_left"] = max(
-            0, int((unlock_at - datetime.datetime.utcnow()).total_seconds())
-        )
+        row["seconds_left"] = max(0, int((unlock_at - now_dt).total_seconds()))
     return row
 
 
@@ -272,12 +278,35 @@ async def issue_prize(vault_id: int, admin_id: int):
             row = _compute_status(dict(row))
             if row["display_status"] == "issued":
                 return False, "Приз уже выдан"
+            if row["display_status"] == "expired":
+                return False, "Срок действия приза истёк"
             if row["display_status"] == "locked":
                 return False, "Приз ещё под замком"
 
             await conn.execute(
                 "UPDATE vault SET status='issued', issued_at=$1, issued_by=$2 WHERE id=$3",
                 now(), admin_id, vault_id,
+            )
+            return True, "Выдано"
+
+
+async def claim_prize(vault_id: int, user_id: int):
+    """Гость закрыл экран выдачи: приз списывается и пропадает из его списка.
+    Запись остаётся в базе со статусом 'issued' — админ видит её в панели."""
+    async with _pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT * FROM vault WHERE id=$1 FOR UPDATE", vault_id
+            )
+            if not row or row["user_id"] != user_id:
+                return False, "Приз не найден"
+            if row["status"] == "issued":
+                return False, "Приз уже выдан"
+            if _compute_status(dict(row))["display_status"] == "expired":
+                return False, "Срок действия приза истёк"
+            await conn.execute(
+                "UPDATE vault SET status='issued', issued_at=$1, issued_by=$2 WHERE id=$3",
+                now(), user_id, vault_id,
             )
             return True, "Выдано"
 

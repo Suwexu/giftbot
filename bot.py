@@ -10,7 +10,7 @@ from aiogram.enums import ParseMode
 
 import database as db
 from security import validate_init_data
-from config import BOT_TOKEN, PORT
+from config import BOT_TOKEN, PORT, PRIZE_TTL_HOURS
 from handlers import user as user_handlers
 from handlers import admin as admin_handlers
 
@@ -52,7 +52,9 @@ async def api_verify(request):
         return json_response({"ok": False, "error": "invalid initData"}, 401)
     await db.upsert_user(user["id"], user.get("username") or "", user.get("first_name") or "")
     spin_wait = await db.get_spin_wait(user["id"])
-    return json_response({"ok": True, "user": user, "spin_wait": spin_wait})
+    return json_response(
+        {"ok": True, "user": user, "spin_wait": spin_wait, "prize_ttl_hours": PRIZE_TTL_HOURS}
+    )
 
 
 async def api_prizes(request):
@@ -84,7 +86,22 @@ async def api_vault(request):
     if not user:
         return json_response({"ok": False, "error": "invalid initData"}, 401)
     items = await db.get_user_vault(user["id"])
+    # выданные и сгоревшие призы у гостя не показываем
+    items = [i for i in items if i["display_status"] not in ("issued", "expired")]
     return json_response({"ok": True, "items": items})
+
+
+async def api_claim(request):
+    body = await request.json()
+    user = auth_from_request(body)
+    if not user:
+        return json_response({"ok": False, "error": "invalid initData"}, 401)
+    try:
+        vault_id = int(body.get("vault_id"))
+    except (TypeError, ValueError):
+        return json_response({"ok": False, "error": "bad vault_id"}, 400)
+    ok, message = await db.claim_prize(vault_id, user["id"])
+    return json_response({"ok": ok, "message": message}, 200 if ok else 400)
 
 
 # ---------------- admin API ----------------
@@ -178,6 +195,7 @@ def build_app() -> web.Application:
     app.router.add_get("/api/prizes", api_prizes)
     app.router.add_post("/api/spin", api_spin)
     app.router.add_post("/api/vault", api_vault)
+    app.router.add_post("/api/claim", api_claim)
 
     app.router.add_post("/api/admin/stats", api_admin_stats)
     app.router.add_post("/api/admin/prizes", api_admin_prizes_list)
